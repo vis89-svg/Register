@@ -281,9 +281,25 @@
 
       setLoading(true);
 
-      const { error } = await supabase
+      const { data: skeletons } = await supabase
         .from('entries')
-        .insert({ pan_number: pan, name: name, date: date, amount: amount, tax_amount: taxAmount, deduction_percentage: deductionPercent });
+        .select('id')
+        .is('date', null)
+        .eq('pan_number', pan)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      let error;
+      if (skeletons && skeletons.length > 0) {
+        ({ error } = await supabase
+          .from('entries')
+          .update({ date: date, amount: amount, tax_amount: taxAmount, deduction_percentage: deductionPercent })
+          .eq('id', skeletons[0].id));
+      } else {
+        ({ error } = await supabase
+          .from('entries')
+          .insert({ pan_number: pan, name: name, date: date, amount: amount, tax_amount: taxAmount, deduction_percentage: deductionPercent }));
+      }
 
       setLoading(false);
 
