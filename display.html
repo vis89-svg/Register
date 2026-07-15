@@ -13,9 +13,12 @@
 <body>
 
   <nav class="nav">
-    <a href="quick-entry.html">Quick Entry</a>
-    <a href="index.html">Full Entry</a>
-    <a href="display.html" class="active">Display</a>
+    <div class="nav-links">
+      <a href="quick-entry.html">Quick Entry</a>
+      <a href="index.html">Full Entry</a>
+      <a href="display.html" class="active">Display</a>
+    </div>
+    <button class="nav-logout" id="logoutBtn">Logout</button>
   </nav>
 
   <div class="container">
@@ -44,6 +47,7 @@
         <button class="btn btn-success btn-sm" id="downloadCsvBtn">Download CSV</button>
         <button class="btn btn-danger btn-sm" id="downloadPdfBtn">Download PDF</button>
         <button class="btn btn-outline btn-sm" id="refreshBtn">Refresh</button>
+        <button class="btn btn-danger btn-sm" id="deleteAllBtn" style="margin-left:auto">Delete All</button>
       </div>
 
       <div class="display-edit-actions" id="displayEditActions" style="display:none">
@@ -531,6 +535,32 @@
     document.getElementById('cancelEditBtn').addEventListener('click', function () {
       loadEntries();
       showToast('Edits discarded.', 'success');
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async function () {
+      await supabase.auth.signOut();
+      window.location.href = 'login.html';
+    });
+
+    document.getElementById('deleteAllBtn').addEventListener('click', async function () {
+      if (!confirm('Delete ALL entries? This cannot be undone.')) return;
+      if (!confirm('Are you sure? All data will be permanently removed.')) return;
+
+      const btn = document.getElementById('deleteAllBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Deleting...';
+
+      const { error } = await supabase.from('entries').delete().gte('id', 0);
+
+      btn.disabled = false;
+      btn.innerHTML = 'Delete All';
+
+      if (error) {
+        showToast('Failed to delete: ' + error.message, 'error');
+      } else {
+        showToast('All entries deleted.', 'success');
+        loadEntries();
+      }
     });
 
     // Load on page load

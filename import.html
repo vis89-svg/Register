@@ -11,9 +11,12 @@
 <body>
 
     <nav class="nav">
-      <a href="quick-entry.html">Quick Entry</a>
-      <a href="index.html">Full Entry</a>
-      <a href="display.html">Display</a>
+      <div class="nav-links">
+        <a href="quick-entry.html">Quick Entry</a>
+        <a href="index.html">Full Entry</a>
+        <a href="display.html">Display</a>
+      </div>
+      <button class="nav-logout" id="logoutBtn">Logout</button>
     </nav>
 
   <div class="container">
@@ -381,6 +384,11 @@
         showToast(validRows.length + ' entries imported successfully!', 'success');
         resetBtn.click();
       }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async function () {
+      await supabase.auth.signOut();
+      window.location.href = 'login.html';
     });
   </script>
 

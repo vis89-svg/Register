@@ -85,7 +85,7 @@
 
     // Get redirect URL from query params
     const urlParams = new URLSearchParams(window.location.search);
-    const redirectTo = urlParams.get('redirect') || 'index.html';
+    const redirectTo = urlParams.get('redirect') || 'quick-entry.html';
 
     function showToast(message, type = 'error') {
       toast.textContent = message;
@@ -150,8 +150,7 @@
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password,
-        options: { persistence: 'session' }
+        password
       });
 
       setLoading(submitBtn, false, 'Signing in...', 'Sign In');
