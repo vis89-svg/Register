@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAN Sorter - Entry</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="index.html" class="active">Entry</a>
+    <a href="import.html">Import</a>
+    <a href="display.html">Display</a>
+  </nav>
+
+  <div class="container">
+    <div class="card">
+      <h1>New Entry</h1>
+      <p class="subtitle">Enter PAN details below</p>
+
+      <form id="entryForm">
+        <div class="form-row">
+          <div class="form-group autocomplete-group">
+            <label for="panNumber">PAN Number</label>
+            <input type="text" id="panNumber" placeholder="e.g. ABCDE1234F" maxlength="10" required autocomplete="off">
+            <div id="panDropdown" class="autocomplete-dropdown"></div>
+          </div>
+          <div class="form-group">
+            <label for="name">Organization / Individual Name</label>
+            <input type="text" id="name" placeholder="Full name or organization" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="date">Date of Entry</label>
+            <input type="date" id="date" required>
+          </div>
+          <div class="form-group">
+            <label for="amount">Amount Entered (₹)</label>
+            <input type="number" id="amount" placeholder="0.00" min="0" step="0.01" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="taxAmount">Tax Amount (₹)</label>
+            <input type="number" id="taxAmount" placeholder="0.00" min="0" step="0.01" required>
+          </div>
+          <div class="form-group">
+            <label for="deductionPercent">Deduction %</label>
+            <input type="number" id="deductionPercent" placeholder="0" min="0" max="100" step="0.01" required>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn" style="margin-top: 0.5rem;">
+          Submit Entry
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script type="module">
+    import { supabase } from './supabase-config.js';
+
+    const form = document.getElementById('entryForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const toast = document.getElementById('toast');
+
+    document.getElementById('date').valueAsDate = new Date();
+
+    const panInput = document.getElementById('panNumber');
+    const nameInput = document.getElementById('name');
+    const panDropdown = document.getElementById('panDropdown');
+
+    let debounceTimer;
+    let selectedFromDropdown = false;
+    const nameCache = {};
+
+    function cacheEntry(pan, name) {
+      nameCache[pan.toUpperCase()] = name;
+    }
+
+    async function fetchSuggestions(text) {
+      const { data } = await supabase
+        .from('entries')
+        .select('pan_number, name')
+        .ilike('pan_number', `%${text}%`)
+        .order('pan_number', { ascending: true })
+        .limit(10);
+
+      const items = data || [];
+      items.forEach(function (item) {
+        cacheEntry(item.pan_number, item.name);
+      });
+
+      return items;
+    }
+
+    function renderDropdown(items) {
+      if (items.length === 0) {
+        panDropdown.classList.remove('show');
+        return;
+      }
+
+      let html = '';
+      items.forEach(function (item) {
+        cacheEntry(item.pan_number, item.name);
+        html += '<div class="dropdown-item" data-pan="' + item.pan_number + '" data-name="' + escapeHtml(item.name) + '">';
+        html += '<span class="dropdown-pan">' + item.pan_number + '</span>';
+        html += '<span class="dropdown-name">' + escapeHtml(item.name) + '</span>';
+        html += '</div>';
+      });
+
+      panDropdown.innerHTML = html;
+      panDropdown.classList.add('show');
+    }
+
+    panInput.addEventListener('input', function () {
+      clearTimeout(debounceTimer);
+      selectedFromDropdown = false;
+
+      const text = panInput.value.trim().toUpperCase();
+      panInput.value = text;
+
+      if (!text) {
+        panDropdown.classList.remove('show');
+        return;
+      }
+
+      debounceTimer = setTimeout(async function () {
+        const items = await fetchSuggestions(text);
+        renderDropdown(items);
+      }, 200);
+    });
+
+    panDropdown.addEventListener('mousedown', function (e) {
+      const item = e.target.closest('.dropdown-item');
+      if (!item) return;
+
+      e.preventDefault();
+
+      selectedFromDropdown = true;
+      panInput.value = item.dataset.pan;
+      nameInput.value = item.dataset.name;
+      panDropdown.classList.remove('show');
+
+      nameInput.focus();
+    });
+
+    panInput.addEventListener('blur', function () {
+      setTimeout(function () {
+        panDropdown.classList.remove('show');
+      }, 200);
+
+      if (selectedFromDropdown) return;
+
+      const pan = panInput.value.trim().toUpperCase();
+      if (!pan) return;
+
+      panInput.value = pan;
+
+      if (!isValidPAN(pan)) return;
+
+      if (nameCache[pan]) {
+        nameInput.value = nameCache[pan];
+        return;
+      }
+
+      supabase
+        .from('entries')
+        .select('name')
+        .eq('pan_number', pan)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .then(function ({ data }) {
+          if (data && data.length > 0) {
+            const fetchedName = data[0].name;
+            nameInput.value = fetchedName;
+            cacheEntry(pan, fetchedName);
+          }
+        });
+    });
+
+    panInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        panDropdown.classList.remove('show');
+      }
+    });
+
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('.autocomplete-group')) {
+        panDropdown.classList.remove('show');
+      }
+    });
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function showToast(message, type) {
+      toast.textContent = message;
+      toast.className = 'toast ' + type + ' show';
+      setTimeout(function () {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    function setLoading(isLoading) {
+      if (isLoading) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner"></span> Submitting...';
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Submit Entry';
+      }
+    }
+
+    function isValidPAN(pan) {
+      return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan.toUpperCase());
+    }
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const pan = document.getElementById('panNumber').value.trim().toUpperCase();
+      const name = document.getElementById('name').value.trim();
+      const date = document.getElementById('date').value;
+      const amount = parseFloat(document.getElementById('amount').value);
+      const taxAmount = parseFloat(document.getElementById('taxAmount').value);
+      const deductionPercent = parseFloat(document.getElementById('deductionPercent').value);
+
+      if (!isValidPAN(pan)) {
+        showToast('Invalid PAN format. Expected: 5 letters + 4 digits + 1 letter (e.g. ABCDE1234F)', 'error');
+        return;
+      }
+
+      if (!name) {
+        showToast('Please enter a name.', 'error');
+        return;
+      }
+
+      if (!date) {
+        showToast('Please select a date.', 'error');
+        return;
+      }
+
+      if (isNaN(amount) || amount < 0) {
+        showToast('Please enter a valid amount.', 'error');
+        return;
+      }
+
+      if (isNaN(taxAmount) || taxAmount < 0) {
+        showToast('Please enter a valid tax amount.', 'error');
+        return;
+      }
+
+      if (isNaN(deductionPercent) || deductionPercent < 0 || deductionPercent > 100) {
+        showToast('Deduction % must be between 0 and 100.', 'error');
+        return;
+      }
+
+      setLoading(true);
+
+      const { error } = await supabase
+        .from('entries')
+        .insert({ pan_number: pan, name: name, date: date, amount: amount, tax_amount: taxAmount, deduction_percentage: deductionPercent });
+
+      setLoading(false);
+
+      if (error) {
+        console.error('Error adding entry:', error);
+        showToast('Failed to save: ' + error.message, 'error');
+      } else {
+        cacheEntry(pan, name);
+        showToast('Entry saved successfully!', 'success');
+        form.reset();
+        document.getElementById('date').valueAsDate = new Date();
+      }
+    });
+  </script>
+
+</body>
+</html>

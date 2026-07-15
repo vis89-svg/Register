@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAN Sorter - Display</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="index.html">Entry</a>
+    <a href="import.html">Import</a>
+    <a href="display.html" class="active">Display</a>
+  </nav>
+
+  <div class="container">
+    <div class="card">
+      <h1>All Entries</h1>
+      <p class="subtitle">View, export as CSV or PDF</p>
+
+      <div class="date-filter">
+        <div class="filter-group">
+          <label for="fromDate">From Date</label>
+          <input type="date" id="fromDate">
+        </div>
+        <div class="filter-group">
+          <label for="toDate">To Date</label>
+          <input type="date" id="toDate">
+        </div>
+        <button class="btn btn-outline btn-sm" id="applyFilterBtn">Apply</button>
+        <button class="btn btn-sm btn-clear" id="clearFilterBtn">Clear</button>
+      </div>
+
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="🔍 Search by PAN or Name...">
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-success btn-sm" id="downloadCsvBtn">Download CSV</button>
+        <button class="btn btn-danger btn-sm" id="downloadPdfBtn">Download PDF</button>
+        <button class="btn btn-outline btn-sm" id="refreshBtn">Refresh</button>
+      </div>
+
+      <div class="display-edit-actions" id="displayEditActions" style="display:none">
+        <button class="btn btn-success btn-sm" id="saveEditBtn">Save Changes</button>
+        <button class="btn btn-danger btn-sm" id="deleteSelectedBtn">Delete Selected</button>
+        <button class="btn btn-outline btn-sm" id="cancelEditBtn">Cancel</button>
+      </div>
+
+      <div class="edit-toggle">
+        <button class="btn btn-outline btn-sm" id="editToggleBtn">✏️ Edit Table</button>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Sl. No <span class="sort-arrows"><span class="sort-arrow" data-sort="sl" data-dir="asc">▲</span><span class="sort-arrow" data-sort="sl" data-dir="desc">▼</span></span></th>
+              <th>Organization / Name <span class="sort-arrows"><span class="sort-arrow" data-sort="name" data-dir="asc">▲</span><span class="sort-arrow" data-sort="name" data-dir="desc">▼</span></span></th>
+              <th>PAN Number</th>
+              <th>Amount (₹) <span class="sort-arrows"><span class="sort-arrow" data-sort="amount" data-dir="asc">▲</span><span class="sort-arrow" data-sort="amount" data-dir="desc">▼</span></span></th>
+              <th>Tax Amount (₹) <span class="sort-arrows"><span class="sort-arrow" data-sort="taxAmount" data-dir="asc">▲</span><span class="sort-arrow" data-sort="taxAmount" data-dir="desc">▼</span></span></th>
+              <th>Deduction % <span class="sort-arrows"><span class="sort-arrow" data-sort="deductionPercent" data-dir="asc">▲</span><span class="sort-arrow" data-sort="deductionPercent" data-dir="desc">▼</span></span></th>
+              <th>Date <span class="sort-arrows"><span class="sort-arrow" data-sort="date" data-dir="asc">▲</span><span class="sort-arrow" data-sort="date" data-dir="desc">▼</span></span></th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr>
+              <td colspan="7" class="text-center text-muted">Loading...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script type="module">
+    import { supabase } from './supabase-config.js';
+
+    let allEntries = [];
+    let currentDisplay = [];
+    let editMode = false;
+    let currentSearchQuery = '';
+    let searchTimeout;
+    let sortConfig = { column: null, direction: 'asc' };
+    const tableBody = document.getElementById('tableBody');
+    const toast = document.getElementById('toast');
+    const searchInput = document.getElementById('searchInput');
+    const displayEditActions = document.getElementById('displayEditActions');
+
+    function showToast(message, type) {
+      toast.textContent = message;
+      toast.className = 'toast ' + type + ' show';
+      setTimeout(function () { toast.classList.remove('show'); }, 3000);
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      const d = new Date(dateStr + 'T00:00:00');
+      return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function formatCurrency(amount) {
+      return '₹ ' + Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function escapeRegex(str) {
+      return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function highlightText(text, query) {
+      if (!query) return escapeHtml(text);
+      const escaped = escapeHtml(text);
+      const re = new RegExp('(' + escapeRegex(query) + ')', 'gi');
+      return escaped.replace(re, '<mark class="search-highlight">$1</mark>');
+    }
+
+    function renderTable(data, query) {
+      currentDisplay = data;
+      currentSearchQuery = query || '';
+
+      if (data.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="7" class="empty-state"><p>No matching entries found.</p></td></tr>';
+        return;
+      }
+
+      let html = '';
+      data.forEach(function (entry) {
+        html += '<tr>';
+        html += '<td>' + entry.sl + '</td>';
+        html += '<td>' + highlightText(entry.name, currentSearchQuery) + '</td>';
+        html += '<td>' + highlightText(entry.pan, currentSearchQuery) + '</td>';
+        html += '<td>' + formatCurrency(entry.amount) + '</td>';
+        html += '<td>' + formatCurrency(entry.taxAmount) + '</td>';
+        html += '<td>' + entry.deductionPercent + '%</td>';
+        html += '<td>' + formatDate(entry.date) + '</td>';
+        html += '</tr>';
+      });
+
+      tableBody.innerHTML = html;
+    }
+
+    function renderEditableDisplay(data) {
+      currentDisplay = data;
+
+      if (data.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="7" class="empty-state"><p>No entries to edit.</p></td></tr>';
+        return;
+      }
+
+      let html = '';
+      data.forEach(function (entry, idx) {
+        html += '<tr data-edit-idx="' + idx + '">';
+        html += '<td><input type="checkbox" class="row-select" data-delete-idx="' + idx + '"></td>';
+        html += '<td><input class="edit-input" type="text" value="' + escapeHtml(entry.name) + '" data-field="name" data-idx="' + idx + '"></td>';
+        html += '<td><input class="edit-input" type="text" value="' + escapeHtml(entry.pan) + '" data-field="pan" data-idx="' + idx + '"></td>';
+        html += '<td><input class="edit-input" type="number" step="0.01" value="' + entry.amount + '" data-field="amount" data-idx="' + idx + '"></td>';
+        html += '<td><input class="edit-input" type="number" step="0.01" value="' + entry.taxAmount + '" data-field="taxAmount" data-idx="' + idx + '"></td>';
+        html += '<td><input class="edit-input" type="number" step="0.01" value="' + entry.deductionPercent + '" data-field="deductionPercent" data-idx="' + idx + '"></td>';
+        html += '<td><input class="edit-input" type="date" value="' + entry.date + '" data-field="date" data-idx="' + idx + '"></td>';
+        html += '</tr>';
+      });
+
+      tableBody.innerHTML = html;
+
+      // Highlight row when checkbox checked
+      tableBody.querySelectorAll('.row-select').forEach(function (cb) {
+        cb.addEventListener('change', function () {
+          this.closest('tr').classList.toggle('tr-selected', this.checked);
+        });
+      });
+    }
+
+    function readEditsFromDOM() {
+      const rows = tableBody.querySelectorAll('tr[data-edit-idx]');
+      rows.forEach(function (row) {
+        const idx = parseInt(row.dataset.editIdx);
+        if (isNaN(idx) || idx >= allEntries.length) return;
+        const entry = allEntries[idx];
+        row.querySelectorAll('.edit-input').forEach(function (input) {
+          const field = input.dataset.field;
+          if (field === 'name') entry.name = input.value.trim();
+          else if (field === 'pan') entry.pan = input.value.toUpperCase().trim();
+          else if (field === 'amount') entry.amount = parseFloat(input.value) || 0;
+          else if (field === 'taxAmount') entry.taxAmount = parseFloat(input.value) || 0;
+          else if (field === 'deductionPercent') entry.deductionPercent = parseFloat(input.value) || 0;
+          else if (field === 'date') entry.date = input.value;
+        });
+      });
+    }
+
+    function applySearch() {
+      currentSearchQuery = searchInput.value.trim().toLowerCase();
+
+      if (editMode) {
+        readEditsFromDOM();
+        if (!currentSearchQuery) {
+          renderEditableDisplay(allEntries);
+        } else {
+          const filtered = allEntries.filter(function (entry) {
+            return entry.pan.toLowerCase().includes(currentSearchQuery) ||
+                   entry.name.toLowerCase().includes(currentSearchQuery);
+          });
+          renderEditableDisplay(filtered);
+        }
+        return;
+      }
+
+      if (!currentSearchQuery) {
+        renderTable(allEntries);
+        return;
+      }
+      const filtered = allEntries.filter(function (entry) {
+        return entry.pan.toLowerCase().includes(currentSearchQuery) ||
+               entry.name.toLowerCase().includes(currentSearchQuery);
+      });
+      renderTable(filtered, currentSearchQuery);
+    }
+
+    function sortEntries(column, direction) {
+      if (editMode) readEditsFromDOM();
+
+      sortConfig.column = column;
+      sortConfig.direction = direction;
+
+      var sorted = allEntries.slice().sort(function (a, b) {
+        var valA, valB;
+        if (column === 'sl') {
+          valA = a.sl;
+          valB = b.sl;
+        } else if (column === 'name') {
+          valA = (a.name || '').toLowerCase();
+          valB = (b.name || '').toLowerCase();
+        } else if (column === 'date') {
+          valA = a.date || '';
+          valB = b.date || '';
+        } else {
+          valA = a[column] != null ? a[column] : 0;
+          valB = b[column] != null ? b[column] : 0;
+        }
+        if (valA < valB) return -1;
+        if (valA > valB) return 1;
+        return 0;
+      });
+
+      if (direction === 'desc') sorted.reverse();
+
+      sorted.forEach(function (e, i) { e.sl = i + 1; });
+      allEntries = sorted;
+
+      document.querySelectorAll('.sort-arrow').forEach(function (el) {
+        el.classList.toggle('active', el.dataset.sort === column && el.dataset.dir === direction);
+      });
+
+      applySearch();
+    }
+
+    async function loadEntries(fromDate, toDate) {
+      editMode = false;
+      displayEditActions.style.display = 'none';
+      document.getElementById('editToggleBtn').textContent = '✏️ Edit Table';
+      sortConfig.column = null;
+      sortConfig.direction = 'asc';
+      document.querySelectorAll('.sort-arrow').forEach(function (el) { el.classList.remove('active'); });
+
+        tableBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Loading...</td></tr>';
+
+      let query = supabase.from('entries').select('*');
+      if (fromDate) query = query.gte('date', fromDate);
+      if (toDate) query = query.lte('date', toDate);
+      query = query.order('created_at', { ascending: false });
+
+      const { data, error } = await query;
+
+      if (error) {
+        tableBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Error loading data.</td></tr>';
+        showToast('Failed to load entries.', 'error');
+        return;
+      }
+
+      allEntries = [];
+
+      if (!data || data.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="7" class="empty-state"><p>No entries found.</p></td></tr>';
+        return;
+      }
+
+      data.forEach(function (entry, index) {
+        allEntries.push({
+          id: entry.id,
+          sl: data.length - index,
+          name: entry.name || '-',
+          pan: entry.pan_number || '-',
+          amount: entry.amount != null ? entry.amount : 0,
+          taxAmount: entry.tax_amount != null ? entry.tax_amount : 0,
+          deductionPercent: entry.deduction_percentage != null ? entry.deduction_percentage : 0,
+          date: entry.date || '-'
+        });
+      });
+
+      searchInput.value = '';
+      renderTable(allEntries);
+    }
+
+    function toggleEditMode() {
+      if (!editMode) {
+        editMode = true;
+        displayEditActions.style.display = 'flex';
+        document.getElementById('editToggleBtn').textContent = '✏️ Exit Edit Mode';
+        applySearch();
+      } else {
+      editMode = false;
+      displayEditActions.style.display = 'none';
+      document.getElementById('editToggleBtn').textContent = '✏️ Edit Table';
+      sortConfig.column = null;
+      sortConfig.direction = 'asc';
+      document.querySelectorAll('.sort-arrow').forEach(function (el) { el.classList.remove('active'); });
+        applySearch();
+      }
+    }
+
+    async function saveEdits() {
+      readEditsFromDOM();
+
+      const changed = allEntries.filter(function (e) { return e.id != null; });
+      if (changed.length === 0) { showToast('No rows to save.', 'error'); return; }
+
+      const saveBtn = document.getElementById('saveEditBtn');
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span class="spinner"></span> Saving...';
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (let i = 0; i < changed.length; i++) {
+        const e = changed[i];
+        const { error } = await supabase
+          .from('entries')
+          .update({
+            pan_number: e.pan,
+            name: e.name,
+            date: e.date,
+            amount: e.amount,
+            tax_amount: e.taxAmount,
+            deduction_percentage: e.deductionPercent
+          })
+          .eq('id', e.id);
+
+        if (error) failCount++;
+        else successCount++;
+      }
+
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = 'Save Changes';
+
+      editMode = false;
+      displayEditActions.style.display = 'none';
+      document.getElementById('editToggleBtn').textContent = '✏️ Edit Table';
+
+      await loadEntries();
+      if (failCount > 0) showToast(successCount + ' saved, ' + failCount + ' failed.', 'error');
+      else showToast('All ' + successCount + ' changes saved!', 'success');
+    }
+
+    function deleteSelected() {
+      const checkboxes = tableBody.querySelectorAll('.row-select:checked');
+      if (checkboxes.length === 0) {
+        showToast('No rows selected.', 'error');
+        return;
+      }
+
+      if (!confirm('Delete ' + checkboxes.length + ' selected entries?')) return;
+
+      const toDelete = [];
+      checkboxes.forEach(function (cb) {
+        const idx = parseInt(cb.dataset.deleteIdx);
+        if (!isNaN(idx) && allEntries[idx]) toDelete.push(allEntries[idx]);
+      });
+
+      if (toDelete.length === 0) return;
+
+      let deletedCount = 0;
+      const promises = [];
+
+      toDelete.forEach(function (entry) {
+        if (entry.id) {
+          promises.push(
+            supabase.from('entries').delete().eq('id', entry.id).then(function (res) {
+              if (!res.error) deletedCount++;
+            })
+          );
+        } else {
+          deletedCount++;
+        }
+      });
+
+      Promise.all(promises).then(function () {
+        const ids = new Set(toDelete.map(function (e) { return e.id || e; }));
+        allEntries = allEntries.filter(function (e) { return !ids.has(e.id || e); });
+        if (sortConfig.column) {
+          sortEntries(sortConfig.column, sortConfig.direction);
+        } else {
+          allEntries.forEach(function (e, i) { e.sl = allEntries.length - i; });
+          applySearch();
+        }
+        showToast(deletedCount + ' entries deleted.', 'success');
+      });
+    }
+
+    function downloadCSV() {
+      if (currentDisplay.length === 0) { showToast('No data to export.', 'error'); return; }
+      const rows = [['Sl.No', 'Organization / Name', 'PAN Number', 'Amount', 'Tax Amount', 'Deduction %', 'Date']];
+      currentDisplay.forEach(function (entry, i) {
+        rows.push([i + 1, entry.name, entry.pan, entry.amount, entry.taxAmount, entry.deductionPercent, entry.date]);
+      });
+      const csv = rows.map(function (row) {
+        return row.map(function (cell) {
+          const val = String(cell);
+          if (val.includes(',') || val.includes('"') || val.includes('\n')) return '"' + val.replace(/"/g, '""') + '"';
+          return val;
+        }).join(',');
+      }).join('\n');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'PAN_Entries_' + new Date().toISOString().slice(0, 10) + '.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+      showToast('CSV downloaded successfully!', 'success');
+    }
+
+    function downloadPDF() {
+      if (currentDisplay.length === 0) { showToast('No data to export.', 'error'); return; }
+      const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      doc.setFontSize(16);
+      doc.text('PAN Entries Report', 14, 20);
+      doc.setFontSize(10);
+      doc.text('Generated: ' + new Date().toLocaleString('en-IN'), 14, 27);
+      const tableData = currentDisplay.map(function (entry, i) {
+        return [i + 1, entry.name, entry.pan, 'Rs. ' + Number(entry.amount).toLocaleString('en-IN'), 'Rs. ' + Number(entry.taxAmount).toLocaleString('en-IN'), entry.deductionPercent + '%', entry.date];
+      });
+      doc.autoTable({
+        head: [['Sl.No', 'Organization / Name', 'PAN Number', 'Amount', 'Tax Amount', 'Deduction %', 'Date']],
+        body: tableData,
+        startY: 32,
+        styles: { fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] }
+      });
+      doc.save('PAN_Entries_' + new Date().toISOString().slice(0, 10) + '.pdf');
+      showToast('PDF downloaded successfully!', 'success');
+    }
+
+    // Event listeners
+    document.getElementById('downloadCsvBtn').addEventListener('click', downloadCSV);
+    document.getElementById('downloadPdfBtn').addEventListener('click', downloadPDF);
+
+    document.getElementById('refreshBtn').addEventListener('click', function () {
+      document.getElementById('fromDate').value = '';
+      document.getElementById('toDate').value = '';
+      loadEntries();
+      showToast('Data refreshed.', 'success');
+    });
+
+    searchInput.addEventListener('input', function () {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(applySearch, 200);
+    });
+
+    document.getElementById('applyFilterBtn').addEventListener('click', function () {
+      const fromDate = document.getElementById('fromDate').value || undefined;
+      const toDate = document.getElementById('toDate').value || undefined;
+      loadEntries(fromDate, toDate);
+      showToast('Filter applied.', 'success');
+    });
+
+    document.getElementById('clearFilterBtn').addEventListener('click', function () {
+      document.getElementById('fromDate').value = '';
+      document.getElementById('toDate').value = '';
+      searchInput.value = '';
+      loadEntries();
+      showToast('Filter cleared.', 'success');
+    });
+
+    document.getElementById('editToggleBtn').addEventListener('click', toggleEditMode);
+    document.getElementById('saveEditBtn').addEventListener('click', saveEdits);
+    document.getElementById('deleteSelectedBtn').addEventListener('click', deleteSelected);
+
+    document.querySelector('thead').addEventListener('click', function (e) {
+      var arrow = e.target.closest('.sort-arrow');
+      if (arrow) sortEntries(arrow.dataset.sort, arrow.dataset.dir);
+    });
+
+    document.getElementById('cancelEditBtn').addEventListener('click', function () {
+      loadEntries();
+      showToast('Edits discarded.', 'success');
+    });
+
+    // Load on page load
+    loadEntries();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAN Sorter - Import</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="index.html">Entry</a>
+    <a href="import.html" class="active">Import</a>
+    <a href="display.html">Display</a>
+  </nav>
+
+  <div class="container">
+    <div class="card">
+      <h1>Bulk Import</h1>
+      <p class="subtitle">Upload a CSV file to import multiple entries at once</p>
+
+      <div class="upload-zone" id="uploadZone">
+        <span class="upload-zone-icon">📄</span>
+        <div class="upload-zone-text">Click to select CSV file</div>
+        <div class="upload-zone-hint">or drag & drop here</div>
+        <input type="file" id="fileInput" accept=".csv" style="display:none">
+      </div>
+
+      <div id="importSection" style="display:none">
+        <div class="import-stats" id="statsBar"></div>
+
+        <div class="edit-toggle" id="editToggleSection" style="display:none">
+          <button class="btn btn-outline btn-sm" id="editToggleBtn">✏️ Edit Table</button>
+          <button class="btn btn-danger btn-sm" id="importDeleteSelectedBtn" style="display:none">Delete Selected</button>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>PAN Number</th>
+                <th>Name</th>
+                <th>Date</th>
+                <th>Amount (₹)</th>
+                <th>Tax Amount (₹)</th>
+                <th>Deduction %</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="previewBody"></tbody>
+          </table>
+        </div>
+
+        <div class="import-actions">
+          <button class="btn btn-success" id="importBtn">Import All Valid</button>
+          <button class="btn btn-outline" id="resetBtn">Choose Different File</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script type="module">
+    import { supabase } from './supabase-config.js';
+
+    let parsedRows = [];
+    let editMode = false;
+
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const importSection = document.getElementById('importSection');
+    const previewBody = document.getElementById('previewBody');
+    const statsBar = document.getElementById('statsBar');
+    const importBtn = document.getElementById('importBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const toast = document.getElementById('toast');
+    const editToggleBtn = document.getElementById('editToggleBtn');
+    const editToggleSection = document.getElementById('editToggleSection');
+    const importDeleteSelectedBtn = document.getElementById('importDeleteSelectedBtn');
+
+    function showToast(message, type) {
+      toast.textContent = message;
+      toast.className = 'toast ' + type + ' show';
+      setTimeout(function () {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    function isValidPAN(pan) {
+      return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan.toUpperCase());
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatCurrency(val) {
+      return '₹ ' + Number(val).toLocaleString('en-IN');
+    }
+
+    function parseCSV(text) {
+      const lines = [];
+      const raw = text.split(/\r?\n/);
+      for (let i = 0; i < raw.length; i++) {
+        const trimmed = raw[i].trim();
+        if (!trimmed) continue;
+        const cols = trimmed.split(',').map(function (c) {
+          return c.trim().replace(/^"|"$/g, '');
+        });
+        if (cols.length < 4) continue;
+        if (i === 0 && cols[0].toLowerCase().includes('pan')) continue;
+        lines.push(cols);
+      }
+      return lines;
+    }
+
+    function validateRow(pan, name, date, amount, taxAmount, deductionPercent) {
+      const errors = [];
+      if (!isValidPAN(pan)) errors.push('Invalid PAN');
+      if (!name) errors.push('Name required');
+      if (!date) errors.push('Date required');
+      if (amount < 0) errors.push('Invalid amount');
+      if (taxAmount < 0) errors.push('Invalid tax');
+      if (deductionPercent < 0 || deductionPercent > 100) errors.push('% must be 0-100');
+      return errors;
+    }
+
+    function processRows(rawRows) {
+      parsedRows = rawRows.map(function (row, idx) {
+        const pan = (row[0] || '').toUpperCase().trim();
+        const name = (row[1] || '').trim();
+        const date = (row[2] || '').trim();
+        const amount = parseFloat(row[3]) || 0;
+        const taxAmount = parseFloat(row[4]) || 0;
+        const deductionPercent = parseFloat(row[5]) || 0;
+        const errors = validateRow(pan, name, date, amount, taxAmount, deductionPercent);
+        return {
+          pan_number: pan,
+          name: name,
+          date: date,
+          amount: amount,
+          tax_amount: taxAmount,
+          deduction_percentage: deductionPercent,
+          valid: errors.length === 0,
+          errors: errors,
+          index: idx + 1
+        };
+      });
+    }
+
+    function updateStats() {
+      const valid = parsedRows.filter(function (r) { return r.valid; });
+      const invalid = parsedRows.filter(function (r) { return !r.valid; });
+      statsBar.innerHTML =
+        '<span class="stat-badge total">Total: ' + parsedRows.length + '</span>' +
+        '<span class="stat-badge valid">Valid: ' + valid.length + '</span>' +
+        (invalid.length ? '<span class="stat-badge invalid">Invalid: ' + invalid.length + '</span>' : '');
+      importBtn.disabled = valid.length === 0;
+    }
+
+    function renderPreview() {
+      let html = '';
+      parsedRows.forEach(function (row, idx) {
+        const cls = row.valid ? '' : 'import-row-invalid';
+        const statusText = row.valid ? '✓' : '✗ ' + row.errors.join(', ');
+        html += '<tr class="' + cls + '">';
+        html += '<td>' + row.index + '</td>';
+        html += '<td>' + escapeHtml(row.pan_number) + '</td>';
+        html += '<td>' + escapeHtml(row.name) + '</td>';
+        html += '<td>' + row.date + '</td>';
+        html += '<td>' + formatCurrency(row.amount) + '</td>';
+        html += '<td>' + formatCurrency(row.tax_amount) + '</td>';
+        html += '<td>' + row.deduction_percentage + '%</td>';
+        html += '<td class="' + (row.valid ? 'import-row-valid' : 'import-row-invalid') + '">' + statusText + '</td>';
+        html += '</tr>';
+      });
+      previewBody.innerHTML = html;
+      updateStats();
+      importSection.style.display = 'block';
+      editToggleSection.style.display = 'block';
+      editToggleBtn.textContent = '✏️ Edit Table';
+    }
+
+    function renderEditablePreview() {
+      let html = '';
+      parsedRows.forEach(function (row, idx) {
+        const errors = validateRow(row.pan_number, row.name, row.date, row.amount, row.tax_amount, row.deduction_percentage);
+        const isValid = errors.length === 0;
+        const cls = isValid ? '' : 'import-row-invalid';
+        const statusText = isValid ? '✓' : '✗ ' + errors.join(', ');
+        html += '<tr class="' + cls + '" data-row-idx="' + idx + '">';
+        html += '<td><input type="checkbox" class="row-select" data-import-delete-idx="' + idx + '"></td>';
+        html += '<td><input class="edit-input" type="text" value="' + escapeHtml(row.pan_number) + '" data-field="pan_number" data-idx="' + idx + '"></td>';
+        html += '<td><input class="edit-input" type="text" value="' + escapeHtml(row.name) + '" data-field="name" data-idx="' + idx + '"></td>';
+        html += '<td><input class="edit-input" type="date" value="' + row.date + '" data-field="date" data-idx="' + idx + '"></td>';
+        html += '<td><input class="edit-input" type="number" step="0.01" value="' + row.amount + '" data-field="amount" data-idx="' + idx + '"></td>';
+        html += '<td><input class="edit-input" type="number" step="0.01" value="' + row.tax_amount + '" data-field="tax_amount" data-idx="' + idx + '"></td>';
+        html += '<td><input class="edit-input" type="number" step="0.01" value="' + row.deduction_percentage + '" data-field="deduction_percentage" data-idx="' + idx + '"></td>';
+        html += '<td class="' + (isValid ? 'import-row-valid' : 'import-row-invalid') + '">' + statusText + '</td>';
+        html += '</tr>';
+      });
+      previewBody.innerHTML = html;
+      updateStats();
+      editToggleBtn.textContent = 'Done Editing';
+
+      previewBody.querySelectorAll('.row-select').forEach(function (cb) {
+        cb.addEventListener('change', function () {
+          this.closest('tr').classList.toggle('tr-selected', this.checked);
+        });
+      });
+    }
+
+    function readEditsFromDOM() {
+      const inputs = previewBody.querySelectorAll('.edit-input');
+      inputs.forEach(function (input) {
+        const idx = parseInt(input.dataset.idx);
+        const field = input.dataset.field;
+        if (idx === undefined || isNaN(idx)) return;
+        if (idx >= parsedRows.length) return;
+        if (field === 'pan_number') {
+          parsedRows[idx].pan_number = input.value.toUpperCase().trim();
+        } else if (field === 'name') {
+          parsedRows[idx].name = input.value.trim();
+        } else if (field === 'date') {
+          parsedRows[idx].date = input.value;
+        } else if (field === 'amount') {
+          parsedRows[idx].amount = parseFloat(input.value) || 0;
+        } else if (field === 'tax_amount') {
+          parsedRows[idx].tax_amount = parseFloat(input.value) || 0;
+        } else if (field === 'deduction_percentage') {
+          parsedRows[idx].deduction_percentage = parseFloat(input.value) || 0;
+        }
+      });
+      parsedRows.forEach(function (row) {
+        const errors = validateRow(row.pan_number, row.name, row.date, row.amount, row.tax_amount, row.deduction_percentage);
+        row.valid = errors.length === 0;
+        row.errors = errors;
+      });
+    }
+
+    function toggleEditMode() {
+      if (!editMode) {
+        renderEditablePreview();
+        editMode = true;
+        importDeleteSelectedBtn.style.display = 'inline-block';
+      } else {
+        readEditsFromDOM();
+        renderPreview();
+        editMode = false;
+        importDeleteSelectedBtn.style.display = 'none';
+      }
+    }
+
+    function deleteSelectedImport() {
+      const checkboxes = previewBody.querySelectorAll('.row-select:checked');
+      if (checkboxes.length === 0) {
+        showToast('No rows selected.', 'error');
+        return;
+      }
+
+      if (!confirm('Delete ' + checkboxes.length + ' selected entries?')) return;
+
+      readEditsFromDOM();
+
+      const toDelete = [];
+      checkboxes.forEach(function (cb) {
+        const idx = parseInt(cb.dataset.importDeleteIdx);
+        if (!isNaN(idx)) toDelete.push(idx);
+      });
+
+      toDelete.sort(function (a, b) { return b - a; });
+      toDelete.forEach(function (idx) {
+        parsedRows.splice(idx, 1);
+      });
+      parsedRows.forEach(function (row, i) {
+        row.index = i + 1;
+      });
+
+      renderEditablePreview();
+      showToast(toDelete.length + ' entries removed.', 'success');
+    }
+
+    function handleFile(file) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const raw = parseCSV(e.target.result);
+        if (raw.length === 0) {
+          showToast('No valid rows found in CSV.', 'error');
+          return;
+        }
+        processRows(raw);
+        editMode = false;
+        renderPreview();
+        uploadZone.classList.add('has-file');
+        uploadZone.querySelector('.upload-zone-text').textContent = file.name;
+      };
+      reader.readAsText(file);
+    }
+
+    editToggleBtn.addEventListener('click', toggleEditMode);
+
+    uploadZone.addEventListener('click', function () {
+      fileInput.click();
+    });
+
+    uploadZone.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+
+    uploadZone.addEventListener('dragleave', function () {
+      uploadZone.classList.remove('dragover');
+    });
+
+    uploadZone.addEventListener('drop', function (e) {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    });
+
+    fileInput.addEventListener('change', function () {
+      if (fileInput.files[0]) handleFile(fileInput.files[0]);
+    });
+
+    resetBtn.addEventListener('click', function () {
+      parsedRows = [];
+      editMode = false;
+      fileInput.value = '';
+      importSection.style.display = 'none';
+      editToggleSection.style.display = 'none';
+      importDeleteSelectedBtn.style.display = 'none';
+      uploadZone.classList.remove('has-file');
+      uploadZone.querySelector('.upload-zone-text').textContent = 'Click to select CSV file';
+    });
+
+    importDeleteSelectedBtn.addEventListener('click', deleteSelectedImport);
+
+    importBtn.addEventListener('click', async function () {
+      if (editMode) {
+        readEditsFromDOM();
+      }
+      const validRows = parsedRows.filter(function (r) { return r.valid; });
+      if (validRows.length === 0) return;
+
+      importBtn.disabled = true;
+      importBtn.innerHTML = '<span class="spinner"></span> Importing...';
+
+      const { error } = await supabase
+        .from('entries')
+        .insert(validRows.map(function (r) {
+          return {
+            pan_number: r.pan_number,
+            name: r.name,
+            date: r.date,
+            amount: r.amount,
+            tax_amount: r.tax_amount,
+            deduction_percentage: r.deduction_percentage
+          };
+        }));
+
+      importBtn.disabled = false;
+      importBtn.innerHTML = 'Import All Valid';
+
+      if (error) {
+        console.error('Import error:', error);
+        showToast('Import failed: ' + error.message, 'error');
+      } else {
+        showToast(validRows.length + ' entries imported successfully!', 'success');
+        resetBtn.click();
+      }
+    });
+  </script>
+
+</body>
+</html>
