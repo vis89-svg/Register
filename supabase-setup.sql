@@ -14,13 +14,13 @@ ALTER TABLE entries DROP CONSTRAINT IF EXISTS valid_pan_format;
 ALTER TABLE entries ADD CONSTRAINT valid_pan_format
   CHECK (pan_number ~ '^[A-Z]{5}[0-9]{4}[A-Z]{1}$');
 
--- 4. Audit log table
+-- 4. Audit log table (record_id as BIGINT to match entries.id)
 CREATE TABLE IF NOT EXISTS audit_log (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id),
   action TEXT NOT NULL, -- 'INSERT','UPDATE','DELETE','EXPORT_CSV','EXPORT_PDF'
   table_name TEXT DEFAULT 'entries',
-  record_id UUID,
+  record_id BIGINT,
   details JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
