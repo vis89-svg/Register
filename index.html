@@ -10,68 +10,77 @@
 </head>
 <body>
 
-  <nav class="nav">
-    <a href="index.html" class="active">Entry</a>
-    <a href="import.html">Import</a>
-    <a href="display.html">Display</a>
-  </nav>
+  <div id="authGuard" style="display: none;">
+    <nav class="nav">
+      <a href="index.html" class="active">Entry</a>
+      <a href="import.html">Import</a>
+      <a href="display.html">Display</a>
+    </nav>
 
-  <div class="container">
-    <div class="card">
-      <h1>New Entry</h1>
-      <p class="subtitle">Enter PAN details below</p>
+    <div class="container">
+      <div class="card">
+        <h1>New Entry</h1>
+        <p class="subtitle">Enter PAN details below</p>
 
-      <form id="entryForm">
-        <div class="form-row">
-          <div class="form-group autocomplete-group">
-            <label for="panNumber">PAN Number</label>
-            <input type="text" id="panNumber" placeholder="e.g. ABCDE1234F" maxlength="10" required autocomplete="off">
-            <div id="panDropdown" class="autocomplete-dropdown"></div>
+        <form id="entryForm">
+          <div class="form-row">
+            <div class="form-group autocomplete-group">
+              <label for="panNumber">PAN Number</label>
+              <input type="text" id="panNumber" placeholder="e.g. ABCDE1234F" maxlength="10" required autocomplete="off">
+              <div id="panDropdown" class="autocomplete-dropdown"></div>
+            </div>
+            <div class="form-group">
+              <label for="name">Organization / Individual Name</label>
+              <input type="text" id="name" placeholder="Full name or organization" required>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="name">Organization / Individual Name</label>
-            <input type="text" id="name" placeholder="Full name or organization" required>
-          </div>
-        </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="date">Date of Entry</label>
-            <input type="date" id="date" required>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="date">Date of Entry</label>
+              <input type="date" id="date" required>
+            </div>
+            <div class="form-group">
+              <label for="amount">Amount Entered (₹)</label>
+              <input type="number" id="amount" placeholder="0.00" min="0" step="0.01" required>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="amount">Amount Entered (₹)</label>
-            <input type="number" id="amount" placeholder="0.00" min="0" step="0.01" required>
-          </div>
-        </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="taxAmount">Tax Amount (₹)</label>
-            <input type="number" id="taxAmount" placeholder="0.00" min="0" step="0.01" required>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="taxAmount">Tax Amount (₹)</label>
+              <input type="number" id="taxAmount" placeholder="0.00" min="0" step="0.01" required>
+            </div>
+            <div class="form-group">
+              <label for="deductionPercent">Deduction %</label>
+              <input type="number" id="deductionPercent" placeholder="0" min="0" max="100" step="0.01" required>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="deductionPercent">Deduction %</label>
-            <input type="number" id="deductionPercent" placeholder="0" min="0" max="100" step="0.01" required>
-          </div>
-        </div>
 
-        <button type="submit" class="btn btn-primary" id="submitBtn" style="margin-top: 0.5rem;">
-          Submit Entry
-        </button>
-      </form>
+          <button type="submit" class="btn btn-primary" id="submitBtn" style="margin-top: 0.5rem;">
+            Submit Entry
+          </button>
+        </form>
+      </div>
     </div>
-  </div>
 
-  <div id="toast" class="toast"></div>
+    <div id="toast" class="toast"></div>
+  </div>
 
   <script type="module">
     import { supabase } from './supabase-config.js';
+
+    // Auth guard
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      window.location.href = 'login.html?redirect=index.html';
+    }
 
     const form = document.getElementById('entryForm');
     const submitBtn = document.getElementById('submitBtn');
     const toast = document.getElementById('toast');
 
+    document.getElementById('authGuard').style.display = 'block';
     document.getElementById('date').valueAsDate = new Date();
 
     const panInput = document.getElementById('panNumber');
@@ -286,6 +295,5 @@
       }
     });
   </script>
-
 </body>
 </html>
