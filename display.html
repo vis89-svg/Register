@@ -174,7 +174,7 @@
       let html = '';
       data.forEach(function (entry, idx) {
         html += '<tr data-edit-idx="' + idx + '">';
-        html += '<td><input type="checkbox" class="row-select" data-delete-idx="' + idx + '"></td>';
+        html += '<td><input type="checkbox" class="row-select" data-delete-id="' + entry.id + '"></td>';
         html += '<td><input class="edit-input" type="text" value="' + escapeHtml(entry.name) + '" data-field="name" data-idx="' + idx + '"></td>';
         html += '<td><input class="edit-input" type="text" value="' + escapeHtml(entry.pan) + '" data-field="pan" data-idx="' + idx + '"></td>';
         html += '<td><input class="edit-input" type="number" step="0.01" value="' + entry.amount + '" data-field="amount" data-idx="' + idx + '"></td>';
@@ -396,8 +396,11 @@
 
       const toDelete = [];
       checkboxes.forEach(function (cb) {
-        const idx = parseInt(cb.dataset.deleteIdx);
-        if (!isNaN(idx) && allEntries[idx]) toDelete.push(allEntries[idx]);
+        const id = parseInt(cb.dataset.deleteId);
+        if (!isNaN(id)) {
+          const found = allEntries.find(function(e) { return e.id === id; });
+          if (found) toDelete.push(found);
+        }
       });
 
       if (toDelete.length === 0) return;
