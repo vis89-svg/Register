@@ -84,6 +84,12 @@
   <script type="module">
     import { supabase } from './supabase-config.js';
 
+    // Auth guard
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      window.location.href = 'login.html?redirect=display.html';
+    }
+
     let allEntries = [];
     let currentDisplay = [];
     let editMode = false;
@@ -422,6 +428,14 @@
 
     function downloadCSV() {
       if (currentDisplay.length === 0) { showToast('No data to export.', 'error'); return; }
+      
+      // Audit log export
+      supabase.from('audit_log').insert({
+        action: 'EXPORT_CSV',
+        table_name: 'entries',
+        details: { rowCount: currentDisplay.length, dateRange: { from: document.getElementById('fromDate').value || null, to: document.getElementById('toDate').value || null } }
+      });
+
       const rows = [['Sl.No', 'Organization / Name', 'PAN Number', 'Amount', 'Tax Amount', 'Deduction %', 'Date']];
       currentDisplay.forEach(function (entry, i) {
         rows.push([i + 1, entry.name, entry.pan, entry.amount, entry.taxAmount, entry.deductionPercent, entry.date]);
@@ -446,6 +460,14 @@
 
     function downloadPDF() {
       if (currentDisplay.length === 0) { showToast('No data to export.', 'error'); return; }
+
+      // Audit log export
+      supabase.from('audit_log').insert({
+        action: 'EXPORT_PDF',
+        table_name: 'entries',
+        details: { rowCount: currentDisplay.length, dateRange: { from: document.getElementById('fromDate').value || null, to: document.getElementById('toDate').value || null } }
+      });
+
       const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       doc.setFontSize(16);
       doc.text('PAN Entries Report', 14, 20);
