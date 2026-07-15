@@ -7,14 +7,22 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://hirgkfhklwtbiajpxhaw.supabase.co; img-src 'self' data:; font-src 'self' data:;">
   <title>PAN Sorter - Login</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .auth-form { display: none; }
+    .auth-form.active { display: block; }
+    .auth-toggle { text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted); }
+    .auth-toggle a { color: var(--primary); text-decoration: none; font-weight: 500; }
+    .auth-toggle a:hover { text-decoration: underline; }
+  </style>
 </head>
 <body>
   <div class="container">
     <div class="card" style="max-width: 400px; margin: 4rem auto;">
-      <h1>Sign In</h1>
+      <h1 id="formTitle">Sign In</h1>
       <p class="subtitle">PAN Sorter - Secure Entry</p>
 
-      <form id="loginForm">
+      <!-- Login Form -->
+      <form id="loginForm" class="auth-form active">
         <div class="form-group">
           <label for="email">Email</label>
           <input type="email" id="email" placeholder="your@email.com" required autocomplete="email">
@@ -30,6 +38,33 @@
         </button>
       </form>
 
+      <!-- Signup Form -->
+      <form id="signupForm" class="auth-form">
+        <div class="form-group">
+          <label for="signupEmail">Email</label>
+          <input type="email" id="signupEmail" placeholder="your@email.com" required autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label for="signupPassword">Password</label>
+          <input type="password" id="signupPassword" placeholder="Create password (min 8 chars)" required autocomplete="new-password" minlength="8">
+        </div>
+
+        <div class="form-group">
+          <label for="signupConfirmPassword">Confirm Password</label>
+          <input type="password" id="signupConfirmPassword" placeholder="Confirm password" required autocomplete="new-password" minlength="8">
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="signupSubmitBtn" style="width: 100%; margin-top: 1rem;">
+          Create Account
+        </button>
+      </form>
+
+      <div class="auth-toggle" id="authToggle">
+        <span id="toggleText">Don't have an account? </span>
+        <a href="#" id="toggleLink">Create Account</a>
+      </div>
+
       <div id="toast" class="toast"></div>
     </div>
   </div>
@@ -37,9 +72,20 @@
   <script type="module">
     import { supabase } from './supabase-config.js';
 
-    const form = document.getElementById('loginForm');
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
     const submitBtn = document.getElementById('submitBtn');
+    const signupSubmitBtn = document.getElementById('signupSubmitBtn');
+    const toggleLink = document.getElementById('toggleLink');
+    const toggleText = document.getElementById('toggleText');
+    const formTitle = document.getElementById('formTitle');
     const toast = document.getElementById('toast');
+
+    let isLoginMode = true;
+
+    // Get redirect URL from query params
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectTo = urlParams.get('redirect') || 'index.html';
 
     function showToast(message, type = 'error') {
       toast.textContent = message;
@@ -47,21 +93,49 @@
       setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
-    function setLoading(isLoading) {
+    function setLoading(btn, isLoading, loadingText, normalText) {
       if (isLoading) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner"></span> Signing in...';
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> ' + loadingText;
       } else {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = 'Sign In';
+        btn.disabled = false;
+        btn.innerHTML = normalText;
       }
     }
 
-    // Get redirect URL from query params
-    const urlParams = new URLSearchParams(window.location.search);
-    const redirectTo = urlParams.get('redirect') || 'index.html';
+    function switchToLogin() {
+      isLoginMode = true;
+      loginForm.classList.add('active');
+      signupForm.classList.remove('active');
+      formTitle.textContent = 'Sign In';
+      toggleText.textContent = "Don't have an account? ";
+      toggleLink.textContent = 'Create Account';
+      loginForm.reset();
+      signupForm.reset();
+    }
 
-    form.addEventListener('submit', async (e) => {
+    function switchToSignup() {
+      isLoginMode = false;
+      signupForm.classList.add('active');
+      loginForm.classList.remove('active');
+      formTitle.textContent = 'Create Account';
+      toggleText.textContent = 'Already have an account? ';
+      toggleLink.textContent = 'Sign In';
+      loginForm.reset();
+      signupForm.reset();
+    }
+
+    toggleLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (isLoginMode) {
+        switchToSignup();
+      } else {
+        switchToLogin();
+      }
+    });
+
+    // Login form submit
+    loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
       const email = document.getElementById('email').value.trim();
@@ -72,15 +146,15 @@
         return;
       }
 
-      setLoading(true);
+      setLoading(submitBtn, true, 'Signing in...', 'Sign In');
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
-        options: { persistence: 'session' } // 8-hour inactivity timeout
+        options: { persistence: 'session' }
       });
 
-      setLoading(false);
+      setLoading(submitBtn, false, 'Signing in...', 'Sign In');
 
       if (error) {
         showToast('Invalid credentials: ' + error.message, 'error');
@@ -92,6 +166,62 @@
         setTimeout(() => {
           window.location.href = redirectTo;
         }, 500);
+      }
+    });
+
+    // Signup form submit
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('signupEmail').value.trim();
+      const password = document.getElementById('signupPassword').value;
+      const confirmPassword = document.getElementById('signupConfirmPassword').value;
+
+      if (!email || !password || !confirmPassword) {
+        showToast('Please fill in all fields', 'error');
+        return;
+      }
+
+      if (password.length < 8) {
+        showToast('Password must be at least 8 characters', 'error');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showToast('Passwords do not match', 'error');
+        return;
+      }
+
+      setLoading(signupSubmitBtn, true, 'Creating account...', 'Create Account');
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { persistence: 'session' }
+        }
+      });
+
+      setLoading(signupSubmitBtn, false, 'Creating account...', 'Create Account');
+
+      if (error) {
+        showToast('Signup failed: ' + error.message, 'error');
+        return;
+      }
+
+      // If email confirmation is OFF, user is auto-signed in (data.session exists)
+      // If email confirmation is ON, data.session is null, data.user exists
+      if (data.session) {
+        showToast('Account created! Signing in...', 'success');
+        setTimeout(() => {
+          window.location.href = redirectTo;
+        }, 500);
+      } else if (data.user) {
+        // Email confirmation required (shouldn't happen with our config, but handle it)
+        showToast('Account created! Please check your email to confirm.', 'success');
+        setTimeout(() => {
+          switchToLogin();
+        }, 2000);
       }
     });
 
