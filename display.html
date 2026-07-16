@@ -47,6 +47,7 @@
         <button class="btn btn-success btn-sm" id="downloadCsvBtn">Download CSV</button>
         <button class="btn btn-danger btn-sm" id="downloadPdfBtn">Download PDF</button>
         <button class="btn btn-outline btn-sm" id="refreshBtn">Refresh</button>
+        <button class="btn btn-outline btn-sm" id="removeDupesBtn" style="display:none">Remove Duplicates</button>
         <button class="btn btn-danger btn-sm" id="deleteAllBtn" style="margin-left:auto">Delete All</button>
       </div>
 
@@ -149,9 +150,11 @@
 
       let html = '';
       data.forEach(function (entry) {
-        html += '<tr>';
+        const dupClass = entry.duplicate ? ' import-row-duplicate' : '';
+        const nameDisplay = highlightText(entry.name, currentSearchQuery) + (entry.duplicate ? ' ⚠' : '');
+        html += '<tr class="' + dupClass + '">';
         html += '<td>' + entry.sl + '</td>';
-        html += '<td>' + highlightText(entry.name, currentSearchQuery) + '</td>';
+        html += '<td>' + nameDisplay + '</td>';
         html += '<td>' + highlightText(entry.pan, currentSearchQuery) + '</td>';
         html += '<td>' + formatCurrency(entry.amount) + '</td>';
         html += '<td>' + formatCurrency(entry.taxAmount) + '</td>';
@@ -173,14 +176,16 @@
 
       let html = '';
       data.forEach(function (entry, idx) {
-        html += '<tr data-edit-idx="' + idx + '">';
+        const dupClass = entry.duplicate ? ' import-row-duplicate' : '';
+        const panValue = escapeHtml(entry.pan);
+        html += '<tr class="' + dupClass + '" data-edit-id="' + entry.id + '">';
         html += '<td><input type="checkbox" class="row-select" data-delete-id="' + entry.id + '"></td>';
-        html += '<td><input class="edit-input" type="text" value="' + escapeHtml(entry.name) + '" data-field="name" data-idx="' + idx + '"></td>';
-        html += '<td><input class="edit-input" type="text" value="' + escapeHtml(entry.pan) + '" data-field="pan" data-idx="' + idx + '"></td>';
-        html += '<td><input class="edit-input" type="number" step="0.01" value="' + entry.amount + '" data-field="amount" data-idx="' + idx + '"></td>';
-        html += '<td><input class="edit-input" type="number" step="0.01" value="' + entry.taxAmount + '" data-field="taxAmount" data-idx="' + idx + '"></td>';
-        html += '<td><input class="edit-input" type="number" step="0.01" value="' + entry.deductionPercent + '" data-field="deductionPercent" data-idx="' + idx + '"></td>';
-        html += '<td><input class="edit-input" type="date" value="' + entry.date + '" data-field="date" data-idx="' + idx + '"></td>';
+        html += '<td><input class="edit-input" type="text" value="' + escapeHtml(entry.name) + '" data-field="name" data-edit-id="' + entry.id + '"></td>';
+        html += '<td><input class="edit-input" type="text" value="' + panValue + '" data-field="pan" data-edit-id="' + entry.id + '">' + (entry.duplicate ? '<span style="margin-left:4px;font-size:0.85rem">⚠</span>' : '') + '</td>';
+        html += '<td><input class="edit-input" type="number" step="0.01" value="' + entry.amount + '" data-field="amount" data-edit-id="' + entry.id + '"></td>';
+        html += '<td><input class="edit-input" type="number" step="0.01" value="' + entry.taxAmount + '" data-field="taxAmount" data-edit-id="' + entry.id + '"></td>';
+        html += '<td><input class="edit-input" type="number" step="0.01" value="' + entry.deductionPercent + '" data-field="deductionPercent" data-edit-id="' + entry.id + '"></td>';
+        html += '<td><input class="edit-input" type="date" value="' + (entry.date || '') + '" data-field="date" data-edit-id="' + entry.id + '"></td>';
         html += '</tr>';
       });
 
@@ -195,11 +200,12 @@
     }
 
     function readEditsFromDOM() {
-      const rows = tableBody.querySelectorAll('tr[data-edit-idx]');
+      const rows = tableBody.querySelectorAll('tr[data-edit-id]');
       rows.forEach(function (row) {
-        const idx = parseInt(row.dataset.editIdx);
-        if (isNaN(idx) || idx >= allEntries.length) return;
-        const entry = allEntries[idx];
+        const id = parseInt(row.dataset.editId);
+        if (isNaN(id)) return;
+        const entry = allEntries.find(function (e) { return e.id === id; });
+        if (!entry) return;
         row.querySelectorAll('.edit-input').forEach(function (input) {
           const field = input.dataset.field;
           if (field === 'name') entry.name = input.value.trim();
@@ -207,7 +213,7 @@
           else if (field === 'amount') entry.amount = parseFloat(input.value) || 0;
           else if (field === 'taxAmount') entry.taxAmount = parseFloat(input.value) || 0;
           else if (field === 'deductionPercent') entry.deductionPercent = parseFloat(input.value) || 0;
-          else if (field === 'date') entry.date = input.value;
+          else if (field === 'date') entry.date = input.value || null;
         });
       });
     }
@@ -316,13 +322,35 @@
           amount: entry.amount != null ? entry.amount : 0,
           taxAmount: entry.tax_amount != null ? entry.tax_amount : 0,
           deductionPercent: entry.deduction_percentage != null ? entry.deduction_percentage : 0,
-          date: entry.date || '-',
+          date: entry.date || '',
           created_at: entry.created_at
         });
       });
 
       searchInput.value = '';
+      flagDuplicates();
       renderTable(allEntries);
+    }
+
+    function flagDuplicates() {
+      const seen = new Set();
+      allEntries.forEach(function (entry) {
+        const pan = (entry.pan || '').toUpperCase().trim();
+        const name = (entry.name || '').trim().toLowerCase();
+        const key = pan + '|' + name;
+        if (seen.has(key)) {
+          entry.duplicate = true;
+        } else {
+          entry.duplicate = false;
+          seen.add(key);
+        }
+      });
+      updateDupesButton();
+    }
+
+    function updateDupesButton() {
+      const hasDupes = allEntries.some(function (e) { return e.duplicate; });
+      document.getElementById('removeDupesBtn').style.display = hasDupes ? 'inline-block' : 'none';
     }
 
     function toggleEditMode() {
@@ -386,6 +414,8 @@
     }
 
     function deleteSelected() {
+      if (editMode) readEditsFromDOM();
+
       const checkboxes = tableBody.querySelectorAll('.row-select:checked');
       if (checkboxes.length === 0) {
         showToast('No rows selected.', 'error');
@@ -423,6 +453,7 @@
       Promise.all(promises).then(function () {
         const ids = new Set(toDelete.map(function (e) { return e.id || e; }));
         allEntries = allEntries.filter(function (e) { return !ids.has(e.id || e); });
+        flagDuplicates();
         if (sortConfig.column) {
           sortEntries(sortConfig.column, sortConfig.direction);
         } else {
@@ -431,6 +462,28 @@
         }
         showToast(deletedCount + ' entries deleted.', 'success');
       });
+    }
+
+    async function removeDupes() {
+      const toDelete = allEntries.filter(function (e) { return e.duplicate; });
+      if (toDelete.length === 0) {
+        showToast('No duplicates found.', 'error');
+        return;
+      }
+      if (!confirm('Delete ' + toDelete.length + ' duplicate entries?')) return;
+
+      let deletedCount = 0;
+      for (let i = 0; i < toDelete.length; i++) {
+        const entry = toDelete[i];
+        if (entry.id) {
+          const { error } = await supabase.from('entries').delete().eq('id', entry.id);
+          if (!error) deletedCount++;
+        } else {
+          deletedCount++;
+        }
+      }
+      await loadEntries();
+      showToast(deletedCount + ' duplicate entries removed.', 'success');
     }
 
     function downloadCSV() {
@@ -529,6 +582,7 @@
     document.getElementById('editToggleBtn').addEventListener('click', toggleEditMode);
     document.getElementById('saveEditBtn').addEventListener('click', saveEdits);
     document.getElementById('deleteSelectedBtn').addEventListener('click', deleteSelected);
+    document.getElementById('removeDupesBtn').addEventListener('click', removeDupes);
 
     document.querySelector('thead').addEventListener('click', function (e) {
       var arrow = e.target.closest('.sort-arrow');

@@ -67,6 +67,7 @@
           <div class="edit-toggle" id="editToggleSection" style="display:none">
             <button class="btn btn-outline btn-sm" id="editToggleBtn">✏️ Edit Table</button>
             <button class="btn btn-danger btn-sm" id="importDeleteSelectedBtn" style="display:none">Delete Selected</button>
+            <button class="btn btn-outline btn-sm" id="removeDupesBtn" style="display:none">Remove Duplicates</button>
           </div>
 
           <div class="table-wrapper">
@@ -319,6 +320,7 @@
     const editToggleBtn = document.getElementById('editToggleBtn');
     const editToggleSection = document.getElementById('editToggleSection');
     const importDeleteSelectedBtn = document.getElementById('importDeleteSelectedBtn');
+    const removeDupesBtn = document.getElementById('removeDupesBtn');
 
     function parseCSV(text) {
       const lines = [];
@@ -353,31 +355,72 @@
           name: name,
           valid: errors.length === 0,
           errors: errors,
-          index: idx + 1
+          index: idx + 1,
+          duplicate: false
         };
+      });
+
+      const seen = new Map();
+      parsedRows.forEach(function (r, i) {
+        if (!r.valid) return;
+        const key = r.pan_number + '|' + r.name;
+        if (seen.has(key)) {
+          r.duplicate = true;
+          r.errors.push('Duplicate in CSV');
+        }
+        seen.set(key, i);
+      });
+    }
+
+    async function checkExistingEntries() {
+      const pans = parsedRows.filter(function (r) { return r.valid && !r.duplicate; }).map(function (r) { return r.pan_number; });
+      if (pans.length === 0) return;
+
+      const { data } = await supabase
+        .from('entries')
+        .select('pan_number, name')
+        .in('pan_number', pans);
+
+      if (!data || data.length === 0) return;
+
+      const existing = new Map();
+      data.forEach(function (e) {
+        existing.set(e.pan_number + '|' + e.name, true);
+      });
+
+      parsedRows.forEach(function (r) {
+        if (!r.valid || r.duplicate) return;
+        if (existing.has(r.pan_number + '|' + r.name)) {
+          r.duplicate = true;
+          r.errors.push('Already in database');
+        }
       });
     }
 
     function updateStats() {
-      const valid = parsedRows.filter(function (r) { return r.valid; });
+      const clean = parsedRows.filter(function (r) { return r.valid && !r.duplicate; });
+      const dupes = parsedRows.filter(function (r) { return r.duplicate; });
       const invalid = parsedRows.filter(function (r) { return !r.valid; });
-      statsBar.innerHTML =
+      let html =
         '<span class="stat-badge total">Total: ' + parsedRows.length + '</span>' +
-        '<span class="stat-badge valid">Valid: ' + valid.length + '</span>' +
-        (invalid.length ? '<span class="stat-badge invalid">Invalid: ' + invalid.length + '</span>' : '');
-      importBtn.disabled = valid.length === 0;
+        '<span class="stat-badge valid">Valid: ' + clean.length + '</span>';
+      if (dupes.length) html += '<span class="stat-badge duplicate">Duplicates: ' + dupes.length + '</span>';
+      if (invalid.length) html += '<span class="stat-badge invalid">Invalid: ' + invalid.length + '</span>';
+      statsBar.innerHTML = html;
+      importBtn.disabled = clean.length === 0;
+      removeDupesBtn.style.display = dupes.length ? 'inline-block' : 'none';
     }
 
     function renderPreview() {
       let html = '';
       parsedRows.forEach(function (row, idx) {
-        const cls = row.valid ? '' : 'import-row-invalid';
-        const statusText = row.valid ? '✓' : '✗ ' + row.errors.join(', ');
+        const cls = !row.valid ? 'import-row-invalid' : row.duplicate ? 'import-row-duplicate' : '';
+        const statusText = !row.valid ? '✗ ' + row.errors.join(', ') : row.duplicate ? '⚠ ' + row.errors.join(', ') : '✓';
         html += '<tr class="' + cls + '">';
         html += '<td>' + row.index + '</td>';
         html += '<td>' + escapeHtml(row.pan_number) + '</td>';
         html += '<td>' + escapeHtml(row.name) + '</td>';
-        html += '<td class="' + (row.valid ? 'import-row-valid' : 'import-row-invalid') + '">' + statusText + '</td>';
+        html += '<td>' + statusText + '</td>';
         html += '</tr>';
       });
       previewBody.innerHTML = html;
@@ -392,13 +435,14 @@
       parsedRows.forEach(function (row, idx) {
         const errors = validateRow(row.pan_number, row.name);
         const isValid = errors.length === 0;
-        const cls = isValid ? '' : 'import-row-invalid';
-        const statusText = isValid ? '✓' : '✗ ' + errors.join(', ');
+        const isDup = row.duplicate;
+        const cls = !isValid ? 'import-row-invalid' : isDup ? 'import-row-duplicate' : '';
+        const statusText = !isValid ? '✗ ' + errors.join(', ') : isDup ? '⚠ ' + errors.join(', ') : '✓';
         html += '<tr class="' + cls + '" data-row-idx="' + idx + '">';
         html += '<td><input type="checkbox" class="row-select" data-import-delete-idx="' + idx + '"></td>';
         html += '<td><input class="edit-input" type="text" value="' + escapeHtml(row.pan_number) + '" data-field="pan_number" data-idx="' + idx + '"></td>';
         html += '<td><input class="edit-input" type="text" value="' + escapeHtml(row.name) + '" data-field="name" data-idx="' + idx + '"></td>';
-        html += '<td class="' + (isValid ? 'import-row-valid' : 'import-row-invalid') + '">' + statusText + '</td>';
+        html += '<td>' + statusText + '</td>';
         html += '</tr>';
       });
       previewBody.innerHTML = html;
@@ -425,10 +469,22 @@
           parsedRows[idx].name = input.value.trim();
         }
       });
-      parsedRows.forEach(function (row) {
+
+      const seen = new Map();
+      parsedRows.forEach(function (row, i) {
         const errors = validateRow(row.pan_number, row.name);
         row.valid = errors.length === 0;
         row.errors = errors;
+        row.duplicate = false;
+      });
+      parsedRows.forEach(function (row, i) {
+        if (!row.valid) return;
+        const key = row.pan_number + '|' + row.name;
+        if (seen.has(key)) {
+          row.duplicate = true;
+          row.errors.push('Duplicate in CSV');
+        }
+        seen.set(key, i);
       });
     }
 
@@ -474,9 +530,34 @@
       showToast(toDelete.length + ' entries removed.', 'success');
     }
 
+    function removeDupesImport() {
+      const toRemove = [];
+      parsedRows.forEach(function (r, idx) {
+        if (r.duplicate) toRemove.push(idx);
+      });
+      if (toRemove.length === 0) {
+        showToast('No duplicates found.', 'error');
+        return;
+      }
+      toRemove.sort(function (a, b) { return b - a; });
+      toRemove.forEach(function (idx) {
+        parsedRows.splice(idx, 1);
+      });
+      parsedRows.forEach(function (row, i) {
+        row.index = i + 1;
+      });
+
+      if (importEditMode) {
+        renderEditablePreview();
+      } else {
+        renderPreview();
+      }
+      showToast(toRemove.length + ' duplicate entries removed.', 'success');
+    }
+
     function handleFile(file) {
       const reader = new FileReader();
-      reader.onload = function (e) {
+      reader.onload = async function (e) {
         const raw = parseCSV(e.target.result);
         if (raw.length === 0) {
           showToast('No valid rows found in CSV.', 'error');
@@ -485,6 +566,12 @@
         processRows(raw);
         importEditMode = false;
         renderPreview();
+
+        if (parsedRows.some(function (r) { return r.valid; })) {
+          await checkExistingEntries();
+          renderPreview();
+        }
+
         uploadZone.classList.add('has-file');
         uploadZone.querySelector('.upload-zone-text').textContent = file.name;
       };
@@ -529,12 +616,13 @@
     });
 
     importDeleteSelectedBtn.addEventListener('click', deleteSelectedImport);
+    removeDupesBtn.addEventListener('click', removeDupesImport);
 
     importBtn.addEventListener('click', async function () {
       if (importEditMode) {
         readEditsFromDOM();
       }
-      const validRows = parsedRows.filter(function (r) { return r.valid; });
+      const validRows = parsedRows.filter(function (r) { return r.valid && !r.duplicate; });
       if (validRows.length === 0) return;
 
       importBtn.disabled = true;
