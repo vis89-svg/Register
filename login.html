@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -8,54 +8,99 @@
   <title>PAN Sorter - Login</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    .auth-form { display: none; }
+    .card {
+      max-width: 340px;
+      padding: 1.6rem;
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,0.35);
+      border-radius: 24px;
+      box-shadow:
+        0 20px 45px rgba(0,0,0,0.18),
+        0 1px 0 rgba(255,255,255,0.35) inset;
+    }
+    body {
+      background: url('BACKGROUND IMAGE.png') no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+    .container {
+      max-width: 340px;
+      margin: 0;
+    }
+    .auth-form { display: none; margin-top: 1rem; }
     .auth-form.active { display: block; }
-    .auth-toggle { text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted); }
-    .auth-toggle a { color: var(--primary); text-decoration: none; font-weight: 500; }
+    .auth-toggle { text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted); position: relative; z-index: 2; }
+    .auth-toggle a { color: var(--primary); text-decoration: none; font-weight: 500; display: inline-block; padding: 0.4rem 0.6rem; }
     .auth-toggle a:hover { text-decoration: underline; }
+    .password-wrapper { position: relative; }
+    .password-wrapper input { padding-right: 2.5rem; }
+    .password-toggle {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      user-select: none;
+      font-size: 1.15rem;
+      line-height: 1;
+      opacity: 0.5;
+      transition: opacity 0.15s;
+    }
+    .password-toggle:hover { opacity: 1; }
+    .password-toggle svg { display: block; }
   </style>
 </head>
 <body>
+
   <div class="container">
-    <div class="card" style="max-width: 400px; margin: 4rem auto;">
-      <h1 id="formTitle">Sign In</h1>
-      <p class="subtitle">PAN Sorter - Secure Entry</p>
+    <div class="card">
+      <h1 id="formTitle">Login</h1>
 
       <!-- Login Form -->
       <form id="loginForm" class="auth-form active">
         <div class="form-group">
-          <label for="email">Email</label>
-          <input type="email" id="email" placeholder="your@email.com" required autocomplete="email">
+          <input type="email" id="email" placeholder="Email" required autocomplete="email">
         </div>
 
         <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" placeholder="Enter password" required autocomplete="current-password">
+          <div class="password-wrapper">
+            <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
+            <span class="password-toggle" onclick="togglePassword(this,'password')"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+          </div>
         </div>
 
-        <button type="submit" class="btn btn-primary" id="submitBtn" style="width: 100%; margin-top: 1rem;">
-          Sign In
+        <button type="submit" class="btn btn-primary" id="submitBtn" style="width: 100%; justify-content: center;">
+          Login
         </button>
       </form>
 
       <!-- Signup Form -->
       <form id="signupForm" class="auth-form">
         <div class="form-group">
-          <label for="signupEmail">Email</label>
-          <input type="email" id="signupEmail" placeholder="your@email.com" required autocomplete="email">
+          <input type="email" id="signupEmail" placeholder="Email" required autocomplete="email">
         </div>
 
         <div class="form-group">
-          <label for="signupPassword">Password</label>
-          <input type="password" id="signupPassword" placeholder="Create password (min 8 chars)" required autocomplete="new-password" minlength="8">
+          <div class="password-wrapper">
+            <input type="password" id="signupPassword" placeholder="Password" required autocomplete="new-password" minlength="8">
+            <span class="password-toggle" onclick="togglePassword(this,'signupPassword')"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+          </div>
         </div>
 
         <div class="form-group">
-          <label for="signupConfirmPassword">Confirm Password</label>
-          <input type="password" id="signupConfirmPassword" placeholder="Confirm password" required autocomplete="new-password" minlength="8">
+          <div class="password-wrapper">
+            <input type="password" id="signupConfirmPassword" placeholder="Confirm Password" required autocomplete="new-password" minlength="8">
+            <span class="password-toggle" onclick="togglePassword(this,'signupConfirmPassword')"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+          </div>
         </div>
 
-        <button type="submit" class="btn btn-primary" id="signupSubmitBtn" style="width: 100%; margin-top: 1rem;">
+        <button type="submit" class="btn btn-primary" id="signupSubmitBtn" style="width: 100%; justify-content: center;">
           Create Account
         </button>
       </form>
@@ -71,6 +116,17 @@
 
   <script type="module">
     import { supabase } from './supabase-config.js';
+
+    window.togglePassword = function (el, inputId) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+      } else {
+        input.type = 'password';
+        el.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+      }
+    };
 
     const loginForm = document.getElementById('loginForm');
     const signupForm = document.getElementById('signupForm');
@@ -107,7 +163,7 @@
       isLoginMode = true;
       loginForm.classList.add('active');
       signupForm.classList.remove('active');
-      formTitle.textContent = 'Sign In';
+      formTitle.textContent = 'Login';
       toggleText.textContent = "Don't have an account? ";
       toggleLink.textContent = 'Create Account';
       loginForm.reset();
@@ -120,7 +176,7 @@
       loginForm.classList.remove('active');
       formTitle.textContent = 'Create Account';
       toggleText.textContent = 'Already have an account? ';
-      toggleLink.textContent = 'Sign In';
+      toggleLink.textContent = 'Login';
       loginForm.reset();
       signupForm.reset();
     }
