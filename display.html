@@ -366,7 +366,7 @@
       allEntries.forEach(function (entry) {
         const pan = (entry.pan || '').toUpperCase().trim();
         const name = (entry.name || '').trim().toLowerCase();
-        const key = pan + '|' + name;
+        const key = pan + '|' + name + '|' + entry.amount;
         if (seen.has(key)) {
           entry.duplicate = true;
         } else {
