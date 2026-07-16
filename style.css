@@ -28,6 +28,9 @@ body {
 }
 
 .nav-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 0.5rem 1.25rem;
   border-radius: 8px;
   font-weight: 600;
@@ -53,6 +56,9 @@ body {
   font-weight: 600;
   font-size: 0.95rem;
   transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .nav a.active {
@@ -70,6 +76,18 @@ body {
 .nav a:not(.active):hover {
   border-color: #4f46e5;
   background: #f8f7ff;
+}
+
+.nav a svg,
+.nav-logout svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
 }
 
 .container {
