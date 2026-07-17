@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://hirgkfhklwtbiajpxhaw.supabase.co; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; connect-src 'self' https://hirgkfhklwtbiajpxhaw.supabase.co; img-src 'self' data:; font-src 'self' data: https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
   <title>PAN Sorter - Entry</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -62,7 +62,7 @@
             </svg>
           </span>
           <span class="title-group">
-            <span class="title-main">New Entry</span>
+            <span class="title-main">Full Entry</span>
             <span class="title-sub">Enter PAN details below</span>
           </span>
         </h1>
@@ -138,7 +138,7 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label for="taxAmount">Tax (%)</label>
+              <label for="taxAmount">Tax (₹)</label>
               <div class="input-icon-wrapper">
                 <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/>
@@ -164,7 +164,9 @@
             </div>
           </div>
 
-          <button type="submit" class="btn btn-primary" id="submitBtn" style="margin-top: 0.5rem;">
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 1.25rem 0 0.75rem;">
+
+          <button type="submit" class="btn btn-primary" id="submitBtn" style="margin-top: 0.5rem; min-width: 180px;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
               <polyline points="17 21 17 13 7 13 7 21"/>
@@ -200,6 +202,9 @@
       disableMobile: true
     });
 
+    document.getElementById('dateToggle').addEventListener('mousedown', function (e) {
+      e.preventDefault();
+    });
     document.getElementById('dateToggle').addEventListener('click', function () {
       datePicker.toggle();
     });

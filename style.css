@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 * {
   margin: 0;
   padding: 0;
@@ -5,7 +7,7 @@
 }
 
 body {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%);
   min-height: 100vh;
   color: #1e293b;
@@ -80,8 +82,8 @@ body {
 
 .nav a svg,
 .nav-logout svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   stroke: currentColor;
   stroke-width: 2;
   fill: none;
@@ -119,7 +121,7 @@ body {
 .card .card-title {
   display: flex;
   align-items: flex-start;
-  gap: 20px;
+  gap: 14px;
   margin-bottom: 35px;
 }
 
@@ -132,7 +134,7 @@ body {
   font-size: 0.95rem;
   color: #64748b;
   font-weight: 400;
-  margin-top: 2px;
+  margin-top: 0;
 }
 
 .icon-container {
@@ -147,8 +149,8 @@ body {
 }
 
 .icon-container svg {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   stroke: #4F46E5;
   stroke-width: 2;
   fill: none;
@@ -209,7 +211,7 @@ body {
 }
 
 .form-group .input-icon-wrapper input#date {
-  padding-right: 42px;
+  padding-right: 52px;
 }
 
 .form-group {
@@ -237,7 +239,7 @@ body {
 
 .form-group input:focus {
   border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
   background: #fff;
 }
 
