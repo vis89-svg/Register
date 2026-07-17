@@ -97,9 +97,9 @@
               <th>Sl. No <span class="sort-arrows"><span class="sort-arrow" data-sort="sl" data-dir="asc">▲</span><span class="sort-arrow" data-sort="sl" data-dir="desc">▼</span></span></th>
               <th>Organization / Name <span class="sort-arrows"><span class="sort-arrow" data-sort="name" data-dir="asc">▲</span><span class="sort-arrow" data-sort="name" data-dir="desc">▼</span></span></th>
               <th>PAN Number</th>
-              <th>Amount (₹) <span class="sort-arrows"><span class="sort-arrow" data-sort="amount" data-dir="asc">▲</span><span class="sort-arrow" data-sort="amount" data-dir="desc">▼</span></span></th>
-              <th>Tax Amount (₹) <span class="sort-arrows"><span class="sort-arrow" data-sort="taxAmount" data-dir="asc">▲</span><span class="sort-arrow" data-sort="taxAmount" data-dir="desc">▼</span></span></th>
-              <th>Deduction % <span class="sort-arrows"><span class="sort-arrow" data-sort="deductionPercent" data-dir="asc">▲</span><span class="sort-arrow" data-sort="deductionPercent" data-dir="desc">▼</span></span></th>
+              <th>Amount <span class="sort-arrows"><span class="sort-arrow" data-sort="amount" data-dir="asc">▲</span><span class="sort-arrow" data-sort="amount" data-dir="desc">▼</span></span></th>
+              <th>Tax <span class="sort-arrows"><span class="sort-arrow" data-sort="taxAmount" data-dir="asc">▲</span><span class="sort-arrow" data-sort="taxAmount" data-dir="desc">▼</span></span></th>
+              <th>Deduction (%)<br><span style="font-size:0.7rem;font-weight:normal;color:#666">Percentage value</span> <span class="sort-arrows"><span class="sort-arrow" data-sort="deductionPercent" data-dir="asc">▲</span><span class="sort-arrow" data-sort="deductionPercent" data-dir="desc">▼</span></span></th>
               <th>Date <span class="sort-arrows"><span class="sort-arrow" data-sort="date" data-dir="asc">▲</span><span class="sort-arrow" data-sort="date" data-dir="desc">▼</span></span></th>
             </tr>
           </thead>
@@ -366,7 +366,7 @@
       allEntries.forEach(function (entry) {
         const pan = (entry.pan || '').toUpperCase().trim();
         const name = (entry.name || '').trim().toLowerCase();
-        const key = pan + '|' + name + '|' + entry.amount;
+        const key = pan + '|' + name + '|' + entry.amount + '|' + (entry.date || '').trim();
         if (seen.has(key)) {
           entry.duplicate = true;
         } else {
@@ -525,7 +525,7 @@
         details: { rowCount: currentDisplay.length, dateRange: { from: document.getElementById('fromDate').value || null, to: document.getElementById('toDate').value || null } }
       });
 
-      const rows = [['Sl.No', 'Organization / Name', 'PAN Number', 'Amount', 'Tax Amount', 'Deduction %', 'Date']];
+      const rows = [['Sl.No', 'Organization / Name', 'PAN Number', 'Amount', 'Tax', 'Deduction (%)', 'Date']];
       currentDisplay.forEach(function (entry, i) {
         rows.push([i + 1, entry.name, entry.pan, entry.amount, entry.taxAmount, entry.deductionPercent, entry.date]);
       });
@@ -566,7 +566,7 @@
         return [i + 1, entry.name, entry.pan, 'Rs. ' + Number(entry.amount).toLocaleString('en-IN'), 'Rs. ' + Number(entry.taxAmount).toLocaleString('en-IN'), entry.deductionPercent + '%', entry.date];
       });
       doc.autoTable({
-        head: [['Sl.No', 'Organization / Name', 'PAN Number', 'Amount', 'Tax Amount', 'Deduction %', 'Date']],
+        head: [['Sl.No', 'Organization / Name', 'PAN Number', 'Amount', 'Tax', 'Deduction (%)', 'Date']],
         body: tableData,
         startY: 32,
         styles: { fontSize: 9, cellPadding: 3 },

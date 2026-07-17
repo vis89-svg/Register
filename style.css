@@ -189,7 +189,27 @@ body {
 }
 
 .form-group .input-icon-wrapper input {
-  padding-left: 42px;
+  padding-left: 52px;
+}
+
+.input-icon-right {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  z-index: 1;
+  color: #94A3B8;
+}
+
+.form-group .input-icon-wrapper input#date {
+  padding-right: 42px;
 }
 
 .form-group {
