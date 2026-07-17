@@ -321,20 +321,6 @@
         html += '</tr>';
       });
 
-      var totalAmount = 0, totalTax = 0;
-      data.forEach(function (e) {
-        totalAmount += Number(e.amount) || 0;
-        totalTax += Number(e.taxAmount) || 0;
-      });
-      html += '<tr class="summary-row">';
-      html += '<td>Total:</td>';
-      html += '<td></td>';
-      html += '<td>' + formatCurrency(totalAmount) + '</td>';
-      html += '<td>' + formatCurrency(totalTax) + '</td>';
-      html += '<td>' + formatCurrency(totalAmount + totalTax) + '</td>';
-      html += '<td></td><td></td>';
-      html += '</tr>';
-
       tableBody.innerHTML = html;
       renderPagination();
       updateTotalBar(data);
