@@ -4,9 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://hirgkfhklwtbiajpxhaw.supabase.co; img-src 'self' data:; font-src 'self' data: https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; connect-src 'self' https://hirgkfhklwtbiajpxhaw.supabase.co; img-src 'self' data:; font-src 'self' data: https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
   <title>PAN Sorter - Quick Entry</title>
+  <link rel="stylesheet" href="style.css">
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
     *, *::before, *::after {
       margin: 0;
       padding: 0;
@@ -14,92 +17,14 @@
     }
 
     body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       background: #F8FAFC;
       min-height: 100vh;
       color: #0F172A;
-      font-weight: 500;
+      font-weight: 400;
       padding: 2rem;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-    }
-
-    /* ===== Navigation ===== */
-    .nav {
-      max-width: 900px;
-      margin: 0 auto 2rem;
-      display: flex;
-      gap: 1rem;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .nav-links {
-      display: flex;
-      gap: 1rem;
-      margin: 0 auto;
-    }
-
-    .nav a {
-      text-decoration: none;
-      padding: 0.75rem 2rem;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 0.95rem;
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .nav a.active {
-      background: #4F46E5;
-      color: #fff;
-      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
-    }
-
-    .nav a:not(.active) {
-      background: #fff;
-      color: #4F46E5;
-      border: 1px solid #E2E8F0;
-    }
-
-    .nav a:not(.active):hover {
-      border-color: #4F46E5;
-      background: #F8F7FF;
-    }
-
-    .nav a svg,
-    .nav-logout svg {
-      width: 18px;
-      height: 18px;
-      stroke: currentColor;
-      stroke-width: 2;
-      fill: none;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      flex-shrink: 0;
-    }
-
-    .nav-logout {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 0.5rem 1.25rem;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 0.9rem;
-      color: #EF4444;
-      background: #fff;
-      border: 1.5px solid #FCA5A5;
-      text-decoration: none;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-family: inherit;
-    }
-
-    .nav-logout:hover {
-      background: #FEF2F2;
-      border-color: #EF4444;
     }
 
     /* ===== Layout ===== */
@@ -673,23 +598,6 @@
     }
 
     @media (max-width: 1023px) {
-      .nav {
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-      }
-
-      .nav-links {
-        flex: 1;
-        justify-content: center;
-        flex-wrap: wrap;
-      }
-
-      .nav a {
-        padding: 0.6rem 1.25rem;
-        font-size: 0.9rem;
-      }
-
       .form-row {
         grid-template-columns: 1fr;
         gap: 1rem;
@@ -714,26 +622,6 @@
     }
 
     @media (max-width: 767px) {
-      .nav {
-        flex-direction: column;
-      }
-
-      .nav-links {
-        width: 100%;
-        justify-content: center;
-        flex-wrap: wrap;
-      }
-
-      .nav a {
-        padding: 0.5rem 1rem;
-        font-size: 0.85rem;
-      }
-
-      .nav-logout {
-        width: 100%;
-        justify-content: center;
-      }
-
       .page-content {
         padding: 1.25rem 0;
       }
