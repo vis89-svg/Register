@@ -170,6 +170,15 @@
         </table>
       </div>
 
+      <div class="total-bar" id="totalBar" style="display:none">
+        <span class="total-bar-label">Totals:</span>
+        <span class="total-bar-item">Amount: <strong id="totalAmount">₹ 0.00</strong></span>
+        <span class="total-bar-sep">|</span>
+        <span class="total-bar-item">Tax: <strong id="totalTax">₹ 0.00</strong></span>
+        <span class="total-bar-sep">|</span>
+        <span class="total-bar-item">Amount + Tax: <strong id="totalSum">₹ 0.00</strong></span>
+      </div>
+
       <div class="pagination" id="pagination">
         <span class="pagination-info" id="paginationInfo">Showing 0 of 0 entries</span>
         <div class="pagination-controls">
@@ -260,6 +269,26 @@
       return escaped.replace(re, '<mark class="search-highlight">$1</mark>');
     }
 
+    function updateTotalBar(data) {
+      var bar = document.getElementById('totalBar');
+      var fromVal = document.getElementById('fromDate').value.trim();
+      var toVal = document.getElementById('toDate').value.trim();
+      var hasFilter = fromVal || toVal;
+      if ((!sortConfig.column && !hasFilter) || !data || data.length === 0) {
+        bar.style.display = 'none';
+        return;
+      }
+      var sumAmount = 0, sumTax = 0;
+      data.forEach(function (entry) {
+        sumAmount += Number(entry.amount) || 0;
+        sumTax += Number(entry.taxAmount) || 0;
+      });
+      document.getElementById('totalAmount').textContent = formatCurrency(sumAmount);
+      document.getElementById('totalTax').textContent = formatCurrency(sumTax);
+      document.getElementById('totalSum').textContent = formatCurrency(sumAmount + sumTax);
+      bar.style.display = 'flex';
+    }
+
     function renderTable(data, query) {
       currentDisplay = data;
       currentSearchQuery = query || '';
@@ -267,6 +296,7 @@
       if (data.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="empty-icon">📂</div><p>No matching entries found.</p><div class="empty-sub">Try adjusting your search or filters.</div></td></tr>';
         renderPagination();
+        updateTotalBar(data);
         return;
       }
 
@@ -293,6 +323,7 @@
 
       tableBody.innerHTML = html;
       renderPagination();
+      updateTotalBar(data);
     }
 
     function renderPagination() {
@@ -326,6 +357,7 @@
     }
 
     function renderEditableDisplay(data) {
+      document.getElementById('totalBar').style.display = 'none';
       currentDisplay = data;
 
       if (data.length === 0) {
@@ -701,7 +733,7 @@
         return [i + 1, entry.name, entry.pan, 'Rs. ' + Number(entry.amount).toLocaleString('en-IN'), 'Rs. ' + Number(entry.taxAmount).toLocaleString('en-IN'), entry.deductionPercent + '%', entry.date];
       });
       doc.autoTable({
-        head: [['Sl.No', 'Organization / Name', 'PAN Number', 'Amount (₹)', 'Tax (₹)', 'Deduction (%)', 'Date of Entry']],
+        head: [['Sl.No', 'Organization / Name', 'PAN Number', 'Amount (Rs.)', 'Tax (Rs.)', 'Deduction (%)', 'Date of Entry']],
         body: tableData,
         startY: 32,
         styles: { fontSize: 9, cellPadding: 3 },
