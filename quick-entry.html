@@ -59,6 +59,10 @@
       margin-bottom: 35px;
     }
 
+    .title-group {
+      gap: 5px;
+    }
+
     .icon-container {
       width: 56px;
       height: 56px;
@@ -762,9 +766,11 @@
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
               </svg>
             </span>
-            Quick Entry
+            <span class="title-group">
+              Quick Entry
+              <span class="title-sub">Enter PAN and Organization Name — date and amounts are set to defaults</span>
+            </span>
           </h1>
-          <p class="card-subtitle">Enter PAN and Organization Name — date and amounts are set to defaults</p>
 
           <form id="entryForm">
             <div class="form-row">
@@ -774,7 +780,7 @@
                     <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
                     <line x1="1" y1="10" x2="23" y2="10" />
                   </svg>
-                  <input type="text" id="panNumber" placeholder="e.g. ABCDE1234F" maxlength="10" required autocomplete="off">
+                  <input type="text" id="panNumber" placeholder="ABCDE1234F" maxlength="10" required autocomplete="off">
                 </div>
                 <div id="panDropdown" class="autocomplete-dropdown"></div>
               </div>
@@ -818,9 +824,11 @@
                 <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
               </svg>
             </span>
-            Import from CSV
+            <span class="title-group">
+              Import from CSV
+              <span class="title-sub">Upload a CSV with PAN Number and Organization Name (2 columns only)</span>
+            </span>
           </h2>
-          <p class="card-subtitle">Upload a CSV with PAN Number and Organization Name (2 columns only)</p>
 
           <div class="upload-zone" id="uploadZone">
             <span class="upload-zone-icon">📄</span>
