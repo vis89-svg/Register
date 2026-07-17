@@ -130,7 +130,7 @@
                   <path d="M8 14h5"/>
                   <path d="M11 8v8"/>
                 </svg>
-                <input type="number" id="amount" placeholder="0.00" min="0" step="0.01" required>
+                <input type="text" id="amount" placeholder="0.00" inputmode="numeric" required>
               </div>
               <span class="field-hint">Amount in INR (₹)</span>
             </div>
@@ -146,7 +146,7 @@
                   <path d="M8 11h5"/>
                   <path d="M8 15h2"/>
                 </svg>
-                <input type="number" id="taxAmount" placeholder="0.00" min="0" step="0.01" required>
+                <input type="text" id="taxAmount" placeholder="0.00" inputmode="numeric" required>
               </div>
             </div>
             <div class="form-group">
@@ -207,6 +207,76 @@
     });
     document.getElementById('dateToggle').addEventListener('click', function () {
       datePicker.toggle();
+    });
+
+    const amountInput = document.getElementById('amount');
+    amountInput.addEventListener('input', function () {
+      let cursorPos = this.selectionStart;
+      let val = this.value;
+      let digitsBefore = val.slice(0, cursorPos).replace(/\D/g, '').length;
+
+      let cleaned = val.replace(/[^\d.]/g, '');
+      let parts = cleaned.split('.');
+      if (parts.length > 2) { parts = [parts[0], parts.slice(1).join('')]; }
+
+      let intPart = parts[0].replace(/^0+(\d)/, '$1');
+      if (intPart === '') intPart = '0';
+      let decPart = parts.length > 1 ? '.' + parts[1].slice(0, 2) : '';
+
+      if (intPart.length > 3) {
+        let last3 = intPart.slice(-3);
+        let rest = intPart.slice(0, -3);
+        rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+        intPart = rest + ',' + last3;
+      }
+
+      let formatted = intPart + decPart;
+      let digitCount = 0, newPos = 0;
+      for (let i = 0; i < formatted.length; i++) {
+        if (formatted[i] >= '0' && formatted[i] <= '9') {
+          digitCount++;
+          if (digitCount === digitsBefore) { newPos = i + 1; break; }
+        }
+      }
+      if (digitCount < digitsBefore || newPos === 0) newPos = formatted.length;
+
+      this.value = formatted;
+      this.setSelectionRange(newPos, newPos);
+    });
+
+    const taxInput = document.getElementById('taxAmount');
+    taxInput.addEventListener('input', function () {
+      let cursorPos = this.selectionStart;
+      let val = this.value;
+      let digitsBefore = val.slice(0, cursorPos).replace(/\D/g, '').length;
+
+      let cleaned = val.replace(/[^\d.]/g, '');
+      let parts = cleaned.split('.');
+      if (parts.length > 2) { parts = [parts[0], parts.slice(1).join('')]; }
+
+      let intPart = parts[0].replace(/^0+(\d)/, '$1');
+      if (intPart === '') intPart = '0';
+      let decPart = parts.length > 1 ? '.' + parts[1].slice(0, 2) : '';
+
+      if (intPart.length > 3) {
+        let last3 = intPart.slice(-3);
+        let rest = intPart.slice(0, -3);
+        rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+        intPart = rest + ',' + last3;
+      }
+
+      let formatted = intPart + decPart;
+      let digitCount = 0, newPos = 0;
+      for (let i = 0; i < formatted.length; i++) {
+        if (formatted[i] >= '0' && formatted[i] <= '9') {
+          digitCount++;
+          if (digitCount === digitsBefore) { newPos = i + 1; break; }
+        }
+      }
+      if (digitCount < digitsBefore || newPos === 0) newPos = formatted.length;
+
+      this.value = formatted;
+      this.setSelectionRange(newPos, newPos);
     });
 
     const panInput = document.getElementById('panNumber');
@@ -370,8 +440,8 @@
       const date = document.getElementById('date').value;
       const dateParts = date.split('/');
       const dbDate = dateParts.length === 3 ? dateParts[2] + '-' + dateParts[1] + '-' + dateParts[0] : date;
-      const amount = parseFloat(document.getElementById('amount').value);
-      const taxAmount = parseFloat(document.getElementById('taxAmount').value);
+      const amount = parseFloat(document.getElementById('amount').value.replace(/,/g, ''));
+      const taxAmount = parseFloat(document.getElementById('taxAmount').value.replace(/,/g, ''));
       const deductionPercent = parseFloat(document.getElementById('deductionPercent').value);
 
       if (!isValidPAN(pan)) {
