@@ -333,7 +333,7 @@ body {
 .filter-group label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #475569;
+  color: #1e293b;
 }
 
 .filter-group input {
@@ -344,6 +344,11 @@ body {
   outline: none;
   transition: border-color 0.2s;
   background: #fff;
+}
+
+.filter-group .input-icon-wrapper input {
+  padding-left: 0.7rem;
+  padding-right: 42px;
 }
 
 .filter-group input:focus {
@@ -368,19 +373,36 @@ body {
 
 .search-bar input {
   width: 100%;
-  padding: 0.8rem 1rem;
+  padding: 0.8rem 1rem 0.8rem 52px;
   border: 1.5px solid #e2e8f0;
   border-radius: 8px;
   font-size: 0.95rem;
   outline: none;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
   background: #fafbfc;
+  font-family: inherit;
 }
 
 .search-bar input:focus {
   border-color: #4f46e5;
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
   background: #fff;
+}
+
+.search-bar .input-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  color: #94A3B8;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.search-bar {
+  position: relative;
 }
 
 .actions {
@@ -397,18 +419,19 @@ body {
 
 table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 thead th {
   background: #f8fafc;
   text-align: left;
-  padding: 0.85rem 1rem;
+  padding: 0.75rem 0.6rem;
   font-weight: 600;
+  font-size: 0.8rem;
   color: #475569;
   border-bottom: 2px solid #e2e8f0;
-  white-space: nowrap;
 }
 
 .sort-arrows {
@@ -439,7 +462,7 @@ thead th {
 }
 
 tbody td {
-  padding: 1.35rem 1rem;
+  padding: 1rem 0.6rem;
   border-bottom: 1px solid #f1f5f9;
   color: #334155;
 }
