@@ -4,63 +4,174 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://hirgkfhklwtbiajpxhaw.supabase.co; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; connect-src 'self' https://hirgkfhklwtbiajpxhaw.supabase.co; img-src 'self' data:; font-src 'self' data: https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
   <title>PAN Sorter - Entry</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 <body>
 
   <div id="authGuard" style="display: none;">
     <nav class="nav">
       <div class="nav-links">
-        <a href="quick-entry.html">Quick Entry</a>
-        <a href="index.html" class="active">Full Entry</a>
-        <a href="display.html">Display</a>
+        <a href="quick-entry.html">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          Quick Entry
+        </a>
+        <a href="index.html" class="active">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          Full Entry
+        </a>
+        <a href="display.html">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3v18h18"/>
+            <path d="M7 16v-3"/>
+            <path d="M12 16v-7"/>
+            <path d="M17 16V8"/>
+          </svg>
+          Display
+        </a>
       </div>
-      <button class="nav-logout" id="logoutBtn">Logout</button>
+      <button class="nav-logout" id="logoutBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Logout
+      </button>
     </nav>
 
     <div class="container">
       <div class="card">
-        <h1>New Entry</h1>
-        <p class="subtitle">Enter PAN details below</p>
+        <h1 class="card-title">
+          <span class="icon-container">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <path d="m12 18 4-4"/>
+              <path d="m9 15 3 3-3 3-3-3z"/>
+            </svg>
+          </span>
+          <span class="title-group">
+            <span class="title-main">Full Entry</span>
+            <span class="title-sub">Enter PAN details below</span>
+          </span>
+        </h1>
 
         <form id="entryForm">
           <div class="form-row">
             <div class="form-group autocomplete-group">
               <label for="panNumber">PAN Number</label>
-              <input type="text" id="panNumber" placeholder="e.g. ABCDE1234F" maxlength="10" required autocomplete="off">
+              <div class="input-icon-wrapper">
+                <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                  <line x1="1" y1="10" x2="23" y2="10"/>
+                </svg>
+                <input type="text" id="panNumber" placeholder="ABCDE1234F" maxlength="10" required autocomplete="off">
+              </div>
               <div id="panDropdown" class="autocomplete-dropdown"></div>
             </div>
             <div class="form-group">
               <label for="name">Organization / Individual Name</label>
-              <input type="text" id="name" placeholder="Full name or organization" required>
+              <div class="input-icon-wrapper">
+                <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
+                  <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
+                  <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/>
+                  <path d="M10 6h4"/>
+                  <path d="M10 10h4"/>
+                  <path d="M10 14h4"/>
+                  <path d="M10 18h4"/>
+                </svg>
+                <input type="text" id="name" placeholder="Full name or organization" required>
+              </div>
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
               <label for="date">Date of Entry</label>
-              <input type="date" id="date" required>
+              <div class="input-icon-wrapper">
+                <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M8 2v4"/>
+                  <path d="M16 2v4"/>
+                  <rect x="3" y="4" width="18" height="18" rx="2"/>
+                  <path d="M3 10h18"/>
+                  <path d="M8 14h.01"/>
+                  <path d="M12 14h.01"/>
+                  <path d="M16 14h.01"/>
+                  <path d="M8 18h.01"/>
+                  <path d="M12 18h.01"/>
+                  <path d="M16 18h.01"/>
+                </svg>
+                <input type="text" id="date" placeholder="16/07/2026" required>
+                <button type="button" id="dateToggle" class="input-icon-right" aria-label="Toggle calendar">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+              </div>
             </div>
             <div class="form-group">
-              <label for="amount">Amount Entered (₹)</label>
-              <input type="number" id="amount" placeholder="0.00" min="0" step="0.01" required>
+              <label for="amount">Amount (₹)</label>
+              <div class="input-icon-wrapper">
+                <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M8 8h8"/>
+                  <path d="M8 14h5"/>
+                  <path d="M11 8v8"/>
+                </svg>
+                <input type="text" id="amount" placeholder="0.00" inputmode="numeric" required>
+              </div>
+              <span class="field-hint">Amount in INR (₹)</span>
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label for="taxAmount">Tax Amount (₹)</label>
-              <input type="number" id="taxAmount" placeholder="0.00" min="0" step="0.01" required>
+              <label for="taxAmount">Tax (₹)</label>
+              <div class="input-icon-wrapper">
+                <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/>
+                  <path d="M8 7h8"/>
+                  <path d="M8 11h5"/>
+                  <path d="M8 15h2"/>
+                </svg>
+                <input type="text" id="taxAmount" placeholder="0.00" inputmode="numeric" required>
+              </div>
             </div>
             <div class="form-group">
-              <label for="deductionPercent">Deduction %</label>
-              <input type="number" id="deductionPercent" placeholder="0" min="0" max="100" step="0.01" required>
+              <label for="deductionPercent">Deduction (%)</label>
+              <div class="input-icon-wrapper">
+                <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="m15 9-6 6"/>
+                  <path d="M9.5 9.5h.01"/>
+                  <path d="M14.5 14.5h.01"/>
+                </svg>
+                <input type="number" id="deductionPercent" placeholder="0" min="0" max="100" step="0.01" required>
+              </div>
+              <span class="field-hint">Percentage value</span>
             </div>
           </div>
 
-          <button type="submit" class="btn btn-primary" id="submitBtn" style="margin-top: 0.5rem;">
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 1.25rem 0 0.75rem;">
+
+          <button type="submit" class="btn btn-primary" id="submitBtn" style="margin-top: 0.5rem; min-width: 180px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
             Submit Entry
           </button>
         </form>
@@ -70,6 +181,7 @@
     <div id="toast" class="toast"></div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script type="module">
     import { supabase } from './supabase-config.js';
 
@@ -84,7 +196,88 @@
     const toast = document.getElementById('toast');
 
     document.getElementById('authGuard').style.display = 'block';
-    document.getElementById('date').valueAsDate = new Date();
+    let datePicker = flatpickr('#date', {
+      dateFormat: 'd/m/Y',
+      allowInput: true,
+      disableMobile: true
+    });
+
+    document.getElementById('dateToggle').addEventListener('mousedown', function (e) {
+      e.preventDefault();
+    });
+    document.getElementById('dateToggle').addEventListener('click', function () {
+      datePicker.toggle();
+    });
+
+    const amountInput = document.getElementById('amount');
+    amountInput.addEventListener('input', function () {
+      let cursorPos = this.selectionStart;
+      let val = this.value;
+      let digitsBefore = val.slice(0, cursorPos).replace(/\D/g, '').length;
+
+      let cleaned = val.replace(/[^\d.]/g, '');
+      let parts = cleaned.split('.');
+      if (parts.length > 2) { parts = [parts[0], parts.slice(1).join('')]; }
+
+      let intPart = parts[0].replace(/^0+(\d)/, '$1');
+      if (intPart === '') intPart = '0';
+      let decPart = parts.length > 1 ? '.' + parts[1].slice(0, 2) : '';
+
+      if (intPart.length > 3) {
+        let last3 = intPart.slice(-3);
+        let rest = intPart.slice(0, -3);
+        rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+        intPart = rest + ',' + last3;
+      }
+
+      let formatted = intPart + decPart;
+      let digitCount = 0, newPos = 0;
+      for (let i = 0; i < formatted.length; i++) {
+        if (formatted[i] >= '0' && formatted[i] <= '9') {
+          digitCount++;
+          if (digitCount === digitsBefore) { newPos = i + 1; break; }
+        }
+      }
+      if (digitCount < digitsBefore || newPos === 0) newPos = formatted.length;
+
+      this.value = formatted;
+      this.setSelectionRange(newPos, newPos);
+    });
+
+    const taxInput = document.getElementById('taxAmount');
+    taxInput.addEventListener('input', function () {
+      let cursorPos = this.selectionStart;
+      let val = this.value;
+      let digitsBefore = val.slice(0, cursorPos).replace(/\D/g, '').length;
+
+      let cleaned = val.replace(/[^\d.]/g, '');
+      let parts = cleaned.split('.');
+      if (parts.length > 2) { parts = [parts[0], parts.slice(1).join('')]; }
+
+      let intPart = parts[0].replace(/^0+(\d)/, '$1');
+      if (intPart === '') intPart = '0';
+      let decPart = parts.length > 1 ? '.' + parts[1].slice(0, 2) : '';
+
+      if (intPart.length > 3) {
+        let last3 = intPart.slice(-3);
+        let rest = intPart.slice(0, -3);
+        rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+        intPart = rest + ',' + last3;
+      }
+
+      let formatted = intPart + decPart;
+      let digitCount = 0, newPos = 0;
+      for (let i = 0; i < formatted.length; i++) {
+        if (formatted[i] >= '0' && formatted[i] <= '9') {
+          digitCount++;
+          if (digitCount === digitsBefore) { newPos = i + 1; break; }
+        }
+      }
+      if (digitCount < digitsBefore || newPos === 0) newPos = formatted.length;
+
+      this.value = formatted;
+      this.setSelectionRange(newPos, newPos);
+    });
 
     const panInput = document.getElementById('panNumber');
     const nameInput = document.getElementById('name');
@@ -245,8 +438,10 @@
       const pan = document.getElementById('panNumber').value.trim().toUpperCase();
       const name = document.getElementById('name').value.trim();
       const date = document.getElementById('date').value;
-      const amount = parseFloat(document.getElementById('amount').value);
-      const taxAmount = parseFloat(document.getElementById('taxAmount').value);
+      const dateParts = date.split('/');
+      const dbDate = dateParts.length === 3 ? dateParts[2] + '-' + dateParts[1] + '-' + dateParts[0] : date;
+      const amount = parseFloat(document.getElementById('amount').value.replace(/,/g, ''));
+      const taxAmount = parseFloat(document.getElementById('taxAmount').value.replace(/,/g, ''));
       const deductionPercent = parseFloat(document.getElementById('deductionPercent').value);
 
       if (!isValidPAN(pan)) {
@@ -293,12 +488,12 @@
       if (skeletons && skeletons.length > 0) {
         ({ error } = await supabase
           .from('entries')
-          .update({ date: date, amount: amount, tax_amount: taxAmount, deduction_percentage: deductionPercent })
+          .update({ date: dbDate, amount: amount, tax_amount: taxAmount, deduction_percentage: deductionPercent })
           .eq('id', skeletons[0].id));
       } else {
         ({ error } = await supabase
           .from('entries')
-          .insert({ pan_number: pan, name: name, date: date, amount: amount, tax_amount: taxAmount, deduction_percentage: deductionPercent }));
+          .insert({ pan_number: pan, name: name, date: dbDate, amount: amount, tax_amount: taxAmount, deduction_percentage: deductionPercent }));
       }
 
       setLoading(false);
@@ -310,7 +505,7 @@
         cacheEntry(pan, name);
         showToast('Entry saved successfully!', 'success');
         form.reset();
-        document.getElementById('date').valueAsDate = new Date();
+        datePicker.setDate(new Date());
       }
     });
 
