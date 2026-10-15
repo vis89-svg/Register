@@ -427,6 +427,21 @@
     .q-text li + li { margin-top: 4px; }
     .q-text strong { font-weight: 600; }
 
+    .q-filter {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 11px;
+      border: 1px solid var(--q-border);
+      border-radius: 999px;
+      background: var(--q-soft-bg);
+      color: var(--q-muted);
+      font: 400 0.8rem/1.4 var(--q-sans);
+    }
+
+    .q-filter-ignored { color: var(--q-warn); }
+
     .q-note {
       font: 400 0.82rem var(--q-sans);
       color: var(--q-muted);
@@ -1003,6 +1018,7 @@
         trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/>',
         download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
         x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+        filter: '<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
         edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>',
         left: '<polyline points="15 18 9 12 15 6"/>',
         right: '<polyline points="9 18 15 12 9 6"/>'
@@ -1088,6 +1104,8 @@
         if (b.type === 'stats') return b.items.map(i => i.label + ': ' + i.value).join('\n');
         if (b.type === 'table') return b.columns.map(c => c.label).join(' | ') + '\n' + b.rows.map(r => r.map(c => typeof c === 'object' ? c.text : c).join(' | ')).join('\n');
         if (b.type === 'file') return 'Created file ' + b.fileName;
+        if (b.type === 'dedupe') return 'Duplicate check: ' + plural(b.rows.length, 'duplicate') + (b.done ? ' (removed)' : ' (not removed yet)');
+        if (b.type === 'filter') return 'Filter: ' + (b.parts.length ? b.parts.join(', ') : 'all entries');
         if (b.type === 'import') return 'Import preview of ' + b.fileName + ': ' + importCounts(b).map(c => c.n + ' ' + c.label).join(', ') + (b.done ? ' (imported)' : '');
         return '';
       }).filter(Boolean).join('\n\n');
@@ -1238,16 +1256,18 @@
     }
 
     function renderFile(b) {
-      const sub = (b.format === 'pdf' ? 'PDF report' : 'Excel spreadsheet') + (b.count != null ? ' · ' + plural(b.count) : '');
+      const sub = b.rows
+        ? 'Cleaned Excel · ' + plural(b.rows.length, 'row')
+        : (b.format === 'pdf' ? 'PDF report' : 'Excel spreadsheet') + (b.count != null ? ' · ' + plural(b.count) : '');
       const card = fileCard(b.fileName, sub);
       const btn = el('button', 'q-btn');
       btn.type = 'button';
-      btn.title = 'Download again with the latest data';
+      btn.title = b.rows ? 'Download the cleaned file' : 'Download again with the latest data';
       btn.append(icon('download', 14), document.createTextNode('Download'));
       btn.addEventListener('click', async () => {
         btn.disabled = true;
         try {
-          const result = await exportEntries(b.request);
+          const result = b.rows ? await saveExcel(b.rows, b.fileName) : await exportEntries(b.request);
           if (typeof result === 'string') alert(result);
         } catch (err) {
           alert('Download failed: ' + err.message);
@@ -1259,13 +1279,16 @@
     }
 
     const STATUS_LABEL = { add: 'New', fill: 'Completes Quick Entry', skip: 'Already in register', error: 'Problem' };
+    const REPEATED_IN_FILE = 'Repeated earlier in this file.';
+    const statusLabel = (r) => r.status === 'skip' && r.reason === REPEATED_IN_FILE ? 'Repeated in file' : STATUS_LABEL[r.status];
 
     function importCounts(b) {
       const count = (s) => b.rows.filter(r => r.status === s).length;
       return [
         { pill: 'add', n: count('add'), label: 'new' },
         { pill: 'fill', n: count('fill'), label: 'complete a Quick Entry' },
-        { pill: 'skip', n: count('skip'), label: 'already in the register' },
+        { pill: 'skip', n: b.rows.filter(r => r.status === 'skip' && r.reason !== REPEATED_IN_FILE).length, label: 'already in the register' },
+        { pill: 'skip', n: b.rows.filter(r => r.status === 'skip' && r.reason === REPEATED_IN_FILE).length, label: 'repeated in the file' },
         { pill: 'error', n: count('error'), label: 'with problems' }
       ].filter(c => c.n);
     }
@@ -1285,7 +1308,7 @@
         columns: [{ label: '#' }, { label: 'Status' }, { label: 'PAN', mono: true }, { label: 'Name', wrap: true }, { label: 'Date' }, { label: 'Amount', num: true }, { label: 'Tax', num: true }, { label: 'Ded. %', num: true }],
         rows: shown.map((r, i) => [
           String(i + 1),
-          { pill: r.status, text: STATUS_LABEL[r.status], reason: r.status === 'add' ? '' : r.reason },
+          { pill: r.status, text: statusLabel(r), reason: r.status === 'add' ? '' : r.reason },
           r.pan, r.name, r.date || '',
           isNum(r.amount) ? money(r.amount) : (r.amount ?? ''),
           isNum(r.tax_amount) ? money(r.tax_amount) : (r.tax_amount ?? ''),
@@ -1325,6 +1348,13 @@
       if (b.type === 'stats') return renderStats(b);
       if (b.type === 'file') return renderFile(b);
       if (b.type === 'import') return renderImport(b, msg);
+      if (b.type === 'dedupe') return renderDedupe(b, msg);
+      if (b.type === 'filter') {
+        const row = el('div', 'q-filter');
+        row.append(icon('filter', 13), el('span', null, b.parts.length ? b.parts.join(' · ') : 'All entries'));
+        if (b.ignored && b.ignored.length) row.appendChild(el('span', 'q-filter-ignored', 'Couldn\'t use: ' + b.ignored.join('; ')));
+        return row;
+      }
       return el('div');
     }
 
@@ -1400,7 +1430,7 @@
     function changedData(chat, i) {
       const reply = chat.messages[i + 1];
       if (!reply || reply.role !== 'assistant') return false;
-      if (reply.blocks.some(b => b.type === 'import' && b.done)) return true;
+      if (reply.blocks.some(b => (b.type === 'import' || b.type === 'dedupe') && b.done)) return true;
       const first = reply.blocks[0];
       return !!(reply.action && ['insert', 'update', 'delete'].includes(reply.action.action) &&
         first && first.type === 'text' && first.text.startsWith('Done.'));
@@ -1517,18 +1547,21 @@
     // ---- AI ----
     function systemPrompt() {
       return `Convert the user's request about a PAN register into ONE JSON object. Today is ${new Date().toISOString().slice(0, 10)}.
+Indian financial year: 1 April to 31 March (FY 2024-25 = 2024-04-01 to 2025-03-31; Q1 Apr-Jun, Q2 Jul-Sep, Q3 Oct-Dec, Q4 Jan-Mar).
 Table "entries": pan_number (AAAAA9999A), name, date (YYYY-MM-DD), amount, tax_amount, deduction_percentage.
 Keys (action and reply are ALWAYS required; leave out other keys that don't apply):
-action: insert|search|summary|update|delete|export|chat
-pan (full PAN, uppercase), pan_prefix ("PAN starting with"), name (insert: the name; search: name contains)
-date (insert: entry date; update: NEW date), entry_date (update/delete: date of the existing entry meant)
-all_entries (true only if user clearly says all entries of the PAN)
-amount, tax_amount, deduction_percentage (insert values, or new values for update)
-date_from, date_to, min_amount, max_amount, min_deduction, max_deduction (filters)
-format: excel|pdf (export only, default excel)
+action: insert|search|summary|update|delete|dedupe|export|chat
 reply: short, friendly plain text for the user (for greetings, greet back and offer help)
+READING (search, summary, export):
+where: list of {"field","op","value"}; field is a column above; op = eq|neq|gt|gte|lt|lte|between|contains|starts_with|in|is_empty|not_empty.
+  between: value [from,to]. in: value list. "at/exactly/of 2%" = eq. "2% and above"/"at least" = gte. "above/more than" = gt. Names: contains.
+sort: {"field","dir":"asc|desc"}. limit: number, for "top 5", "latest 10" etc.
+summary only: group_by = month|quarter|financial_year|year|pan|name (optional); measures = list of count|sum_amount|sum_tax|avg_amount|avg_tax|avg_deduction|min_amount|max_amount (default count,sum_amount,sum_tax)
+export only: format = excel|pdf (default excel)
+CHANGING (insert, update, delete): pan, name, date (insert: entry date; update: NEW date), entry_date (update/delete: date of the existing entry meant), all_entries (true only if user clearly says all entries of the PAN), amount, tax_amount, deduction_percentage (insert values, or new values for update)
 Rules: Never invent a PAN, name, date or amount; use only what the user said in this chat. insert needs pan+name; update/delete need pan.
-summary = totals/counts. export = user wants a file/download/Excel/xlsx/spreadsheet/PDF (the app CAN make files), same filters as search; "that list"/"these" = reuse the previous request's filters.
+dedupe = find/show/remove duplicate (double, repeated) entries in the register; it only shows them, the user confirms before anything is deleted; can use where.
+search = list entries; summary = totals/counts/averages; export = file/download/Excel/xlsx/PDF (the app CAN make files). "those"/"that list" = reuse the previous request's where.
 Files are imported with the paperclip button next to the message box; if the user asks to upload or import a file, use chat and tell them that.
 chat = greetings, help, unclear or invalid requests; reply must say exactly what is missing or wrong.
 Never claim success in reply; the app reports results.`;
@@ -1611,6 +1644,7 @@ Never claim success in reply; the app reports results.`;
       if (/\b(excel|xlsx|spreadsheet|pdf|export|download)\b/i.test(text)) {
         return { action: 'export', pan, format: /\bpdf\b/i.test(text) ? 'pdf' : 'excel' };
       }
+      if (/\b(duplicates?|dupes?|double entr|repeated entr)/i.test(text)) return { action: 'dedupe', pan };
       if (/^\s*(delete|remove)\b/i.test(text)) return { action: 'delete', pan };
       if (/^\s*update\b/i.test(text)) {
         return {
@@ -1623,62 +1657,260 @@ Never claim success in reply; the app reports results.`;
       if (/\b(total|sum|count|how many)\b/i.test(text)) return { action: 'summary', pan };
       if (/\b(show|find|get|list|display|search)\b/i.test(text)) {
         const prefix = text.match(/starting\s+with\s+([a-z0-9]+)/i);
+        const exact = !/above|below|more|less|over|under/i.test(text) && num(/deduction[^\d]*?(?:at|of|=|is|exactly|equal\s+to)?\s*([\d.]+)\s*%?/i);
         return {
           action: 'search', pan,
           pan_prefix: prefix ? prefix[1].toUpperCase() : null,
-          min_deduction: num(/deduction[^\d]*above\s+([\d.]+)/i)
+          min_deduction: num(/deduction[^\d]*above\s+([\d.]+)/i),
+          max_deduction: num(/deduction[^\d]*below\s+([\d.]+)/i),
+          where: isNum(exact) ? [{ field: 'deduction_percentage', op: 'eq', value: exact }] : []
         };
       }
       return { action: 'chat', reply: 'Sorry, I couldn\'t understand that. Try something like "Show me all entries" or "Enter PAN ABCDE1234F for John Doe on 2024-01-15 with amount 5000".' };
     }
 
     // ---- Database queries ----
-    function applyFilters(query, a) {
-      if (a.pan) query = query.eq('pan_number', String(a.pan).toUpperCase());
-      else if (a.pan_prefix) query = query.ilike('pan_number', String(a.pan_prefix).toUpperCase() + '%');
-      if (a.name) query = query.ilike('name', '%' + a.name + '%');
-      if (a.date_from) query = query.gte('date', a.date_from);
-      if (a.date_to) query = query.lte('date', a.date_to);
-      if (isNum(a.min_amount)) query = query.gte('amount', a.min_amount);
-      if (isNum(a.max_amount)) query = query.lte('amount', a.max_amount);
-      if (isNum(a.min_deduction)) query = query.gt('deduction_percentage', a.min_deduction);
-      if (isNum(a.max_deduction)) query = query.lt('deduction_percentage', a.max_deduction);
+    // The AI describes what to read (any column, comparison, sorting, top-N); this code checks
+    // every part before running it, and only ever reads. Changes go through the fixed actions below.
+    const FIELD_TYPES = { pan_number: 'text', name: 'text', date: 'date', amount: 'num', tax_amount: 'num', deduction_percentage: 'num' };
+    const FIELD_ALIASES = { pan: 'pan_number', tax: 'tax_amount', deduction: 'deduction_percentage', percent: 'deduction_percentage' };
+    const FIELD_LABELS = { pan_number: 'PAN', name: 'name', date: 'date', amount: 'amount', tax_amount: 'tax', deduction_percentage: 'deduction' };
+    const OPS = ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'between', 'contains', 'starts_with', 'in', 'is_empty', 'not_empty'];
+
+    function fieldName(f) {
+      const key = String(f || '').trim().toLowerCase();
+      return FIELD_ALIASES[key] || key;
+    }
+
+    function convertValue(field, v) {
+      const type = FIELD_TYPES[field];
+      if (type === 'num') { const n = parseNum(v); return typeof n === 'number' ? n : null; }
+      if (type === 'date') return normDate(v);
+      const t = String(v ?? '').trim().slice(0, 100);
+      return t ? (field === 'pan_number' ? t.toUpperCase() : t) : null;
+    }
+
+    function checkCondition(c) {
+      const field = fieldName(c && c.field);
+      const op = String(c && c.op || '').toLowerCase();
+      const what = (c && c.field) + ' ' + op;
+      if (!FIELD_TYPES[field]) return { why: `unknown column "${c && c.field}"` };
+      if (!OPS.includes(op)) return { why: `"${op}" on ${FIELD_LABELS[field]}` };
+      const type = FIELD_TYPES[field];
+      if (['contains', 'starts_with'].includes(op) && type !== 'text') return { why: what };
+      if (['gt', 'gte', 'lt', 'lte', 'between'].includes(op) && type === 'text') return { why: what };
+      if (op === 'is_empty' || op === 'not_empty') return { cond: { field, op } };
+      if (op === 'between') {
+        const vals = Array.isArray(c.value) ? c.value.map(v => convertValue(field, v)) : [];
+        if (vals.length !== 2 || vals.includes(null)) return { why: what };
+        return { cond: { field, op, value: vals[0] <= vals[1] ? vals : [vals[1], vals[0]] } };
+      }
+      if (op === 'in') {
+        const vals = (Array.isArray(c.value) ? c.value : [c.value]).slice(0, 50).map(v => convertValue(field, v)).filter(v => v !== null);
+        if (!vals.length) return { why: what };
+        return { cond: { field, op, value: vals } };
+      }
+      const value = convertValue(field, c.value);
+      if (value === null) return { why: `${FIELD_LABELS[field]} ${op} "${c.value}"` };
+      return { cond: { field, op, value } };
+    }
+
+    // Turn an action into checked conditions, sort and limit. Older saved requests used fixed keys; they still work.
+    function normalizeQuery(a) {
+      const conds = [];
+      const ignored = [];
+      const add = (c) => { const r = checkCondition(c); r.cond ? conds.push(r.cond) : ignored.push(r.why); };
+      if (a.pan) add({ field: 'pan_number', op: 'eq', value: a.pan });
+      else if (a.pan_prefix) add({ field: 'pan_number', op: 'starts_with', value: a.pan_prefix });
+      if (a.name) add({ field: 'name', op: 'contains', value: a.name });
+      if (a.date_from) add({ field: 'date', op: 'gte', value: a.date_from });
+      if (a.date_to) add({ field: 'date', op: 'lte', value: a.date_to });
+      if (isNum(a.min_amount)) add({ field: 'amount', op: 'gte', value: a.min_amount });
+      if (isNum(a.max_amount)) add({ field: 'amount', op: 'lte', value: a.max_amount });
+      if (isNum(a.min_deduction)) add({ field: 'deduction_percentage', op: 'gt', value: a.min_deduction });
+      if (isNum(a.max_deduction)) add({ field: 'deduction_percentage', op: 'lt', value: a.max_deduction });
+      (Array.isArray(a.where) ? a.where : []).forEach(add);
+      // A value given as a plain key when reading ("deduction_percentage": 2) means "equals"
+      ['amount', 'tax_amount', 'deduction_percentage', 'date'].forEach(k => {
+        if (a[k] != null && a[k] !== '' && !conds.some(c => c.field === k)) add({ field: k, op: 'eq', value: a[k] });
+      });
+
+      let sort = null;
+      if (a.sort && FIELD_TYPES[fieldName(a.sort.field)]) sort = { field: fieldName(a.sort.field), dir: a.sort.dir === 'asc' ? 'asc' : 'desc' };
+      else if (a.sort && a.sort.field) sort = { measure: String(a.sort.field), dir: a.sort.dir === 'asc' ? 'asc' : 'desc' };
+      const n = Math.floor(Number(a.limit));
+      const limit = n >= 1 ? Math.min(n, 1000) : null;
+      return { conds, ignored, sort, limit };
+    }
+
+    const likeEscape = (v) => String(v).replace(/[\\%_]/g, m => '\\' + m);
+
+    function applyConds(query, conds) {
+      conds.forEach(({ field, op, value }) => {
+        if (op === 'eq') query = field === 'name' ? query.ilike(field, likeEscape(value)) : query.eq(field, value);
+        else if (op === 'neq') query = query.neq(field, value);
+        else if (op === 'gt') query = query.gt(field, value);
+        else if (op === 'gte') query = query.gte(field, value);
+        else if (op === 'lt') query = query.lt(field, value);
+        else if (op === 'lte') query = query.lte(field, value);
+        else if (op === 'between') query = query.gte(field, value[0]).lte(field, value[1]);
+        else if (op === 'contains') query = query.ilike(field, '%' + likeEscape(value) + '%');
+        else if (op === 'starts_with') query = query.ilike(field, likeEscape(value) + '%');
+        else if (op === 'in') query = query.in(field, value);
+        else if (op === 'is_empty') query = query.is(field, null);
+        else if (op === 'not_empty') query = query.not(field, 'is', null);
+      });
       return query;
     }
 
+    function orderQuery(query, q) {
+      if (q.sort && q.sort.field) return query.order(q.sort.field, { ascending: q.sort.dir === 'asc', nullsFirst: false }).order('created_at', { ascending: false });
+      return query.order('date', { ascending: true, nullsFirst: false }).order('created_at', { ascending: true });
+    }
+
     // Supabase returns at most 1000 rows per request, so page through everything
-    async function fetchAllEntries(a) {
+    async function fetchAllEntries(q) {
       const all = [];
       for (let from = 0; ; from += 1000) {
-        const { data, error } = await applyFilters(supabase.from('entries').select('*'), a)
-          .order('date', { ascending: true, nullsFirst: false })
-          .order('created_at', { ascending: true })
-          .range(from, from + 999);
+        const { data, error } = await orderQuery(applyConds(supabase.from('entries').select('*'), q.conds), q).range(from, from + 999);
         if (error) throw new Error(error.message);
         all.push(...data);
+        if (q.limit && all.length >= q.limit) return all.slice(0, q.limit);
         if (data.length < 1000) return all;
       }
     }
 
+    function showValue(field, v) {
+      if (field === 'amount' || field === 'tax_amount') return money(v);
+      if (field === 'deduction_percentage') return v + '%';
+      if (FIELD_TYPES[field] === 'text') return '"' + v + '"';
+      return v;
+    }
+
+    const OP_WORDS = { eq: '=', neq: '≠', gt: '>', gte: '≥', lt: '<', lte: '≤' };
+
+    // Plain-English description of what was looked up, shown with every answer
+    function describeQuery(q) {
+      const parts = q.conds.map(({ field, op, value }) => {
+        const label = FIELD_LABELS[field];
+        if (OP_WORDS[op]) return `${label} ${OP_WORDS[op]} ${showValue(field, value)}`;
+        if (op === 'between') return `${label} ${showValue(field, value[0])} to ${showValue(field, value[1])}`;
+        if (op === 'contains') return `${label} contains ${showValue(field, value)}`;
+        if (op === 'starts_with') return `${label} starts with ${showValue(field, value)}`;
+        if (op === 'in') return `${label} is ${value.map(v => showValue(field, v)).join(' or ')}`;
+        if (op === 'is_empty') return `no ${label}`;
+        return `${label} filled in`;
+      });
+      if (q.sort) {
+        const by = q.sort.field ? FIELD_LABELS[q.sort.field] : MEASURES[q.sort.measure]?.label.toLowerCase() || q.sort.measure;
+        const numeric = !q.sort.field || FIELD_TYPES[q.sort.field] !== 'text';
+        parts.push(`sorted by ${by}, ${q.sort.dir === 'asc' ? (numeric ? 'low to high' : 'A to Z') : (numeric ? 'high to low' : 'Z to A')}`);
+      }
+      if (q.limit) parts.push(`top ${q.limit}`);
+      return parts;
+    }
+
     function describeFilters(a) {
-      const parts = [];
-      if (a.pan) parts.push('PAN ' + String(a.pan).toUpperCase());
-      else if (a.pan_prefix) parts.push('PAN starting ' + String(a.pan_prefix).toUpperCase());
-      if (a.name) parts.push('name contains "' + a.name + '"');
-      if (a.date_from || a.date_to) parts.push('date ' + (a.date_from || '...') + ' to ' + (a.date_to || '...'));
-      if (isNum(a.min_amount)) parts.push('amount >= ' + a.min_amount);
-      if (isNum(a.max_amount)) parts.push('amount <= ' + a.max_amount);
-      if (isNum(a.min_deduction)) parts.push('deduction > ' + a.min_deduction + '%');
-      if (isNum(a.max_deduction)) parts.push('deduction < ' + a.max_deduction + '%');
+      const parts = describeQuery(normalizeQuery(a));
       return parts.length ? parts.join(', ') : 'all entries';
+    }
+
+    function filterBlock(q) {
+      return { type: 'filter', parts: describeQuery(q), ignored: q.ignored };
+    }
+
+    // ---- Totals, averages and grouping (summary) ----
+    const sumOf = (rows, k) => rows.reduce((s, e) => s + (Number(e[k]) || 0), 0);
+    const MEASURES = {
+      count: { label: 'Entries', calc: rows => rows.length, show: v => v.toLocaleString('en-IN') },
+      sum_amount: { label: 'Total amount', calc: rows => sumOf(rows, 'amount'), show: money },
+      sum_tax: { label: 'Total tax', calc: rows => sumOf(rows, 'tax_amount'), show: money },
+      avg_amount: { label: 'Average amount', calc: rows => sumOf(rows, 'amount') / rows.length, show: money },
+      avg_tax: { label: 'Average tax', calc: rows => sumOf(rows, 'tax_amount') / rows.length, show: money },
+      avg_deduction: { label: 'Average deduction', calc: rows => sumOf(rows, 'deduction_percentage') / rows.length, show: v => (Math.round(v * 100) / 100) + '%' },
+      min_amount: { label: 'Smallest amount', calc: rows => Math.min(...rows.map(e => Number(e.amount) || 0)), show: money },
+      max_amount: { label: 'Largest amount', calc: rows => Math.max(...rows.map(e => Number(e.amount) || 0)), show: money }
+    };
+
+    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const fyStart = (d) => { const y = +d.slice(0, 4); return +d.slice(5, 7) >= 4 ? y : y - 1; };
+    const fyLabel = (y) => `FY ${y}-${String(y + 1).slice(2)}`;
+
+    // Each grouping gives [sort key, label] for an entry
+    const GROUPS = {
+      month: { label: 'Month', key: e => e.date ? [e.date.slice(0, 7), MONTH_NAMES[+e.date.slice(5, 7) - 1] + ' ' + e.date.slice(0, 4)] : null },
+      quarter: {
+        label: 'Quarter',
+        key: e => {
+          if (!e.date) return null;
+          const m = +e.date.slice(5, 7);
+          const q = m >= 4 && m <= 6 ? 1 : m >= 7 && m <= 9 ? 2 : m >= 10 ? 3 : 4;
+          return [fyStart(e.date) + '-' + q, `Q${q} ${fyLabel(fyStart(e.date))}`];
+        }
+      },
+      financial_year: { label: 'Financial year', key: e => e.date ? [String(fyStart(e.date)), fyLabel(fyStart(e.date))] : null },
+      year: { label: 'Year', key: e => e.date ? [e.date.slice(0, 4), e.date.slice(0, 4)] : null },
+      pan: { label: 'PAN', key: e => [e.pan_number, e.pan_number + (e.name ? ' · ' + e.name : '')] },
+      name: { label: 'Name', key: e => [normName(e.name), e.name || '—'] }
+    };
+
+    function summarize(rows, a, q) {
+      let measures = (Array.isArray(a.measures) ? a.measures : []).map(String).filter(m => MEASURES[m]);
+      if (!measures.length) measures = ['count', 'sum_amount', 'sum_tax'];
+      const group = GROUPS[a.group_by];
+
+      if (!group) {
+        return { type: 'stats', items: measures.map(m => ({ label: MEASURES[m].label, value: MEASURES[m].show(MEASURES[m].calc(rows)) })) };
+      }
+
+      const buckets = new Map();
+      rows.forEach(e => {
+        const k = group.key(e) || ['~', 'No date'];
+        if (!buckets.has(k[0])) buckets.set(k[0], { label: k[1], rows: [] });
+        buckets.get(k[0]).rows.push(e);
+      });
+      let list = [...buckets.entries()].map(([key, b]) => ({ key, label: b.label, values: Object.fromEntries(measures.map(m => [m, MEASURES[m].calc(b.rows)])) }));
+      const sortMeasure = q.sort && q.sort.measure && MEASURES[q.sort.measure] ? q.sort.measure : null;
+      if (sortMeasure) list.sort((x, y) => (x.values[sortMeasure] - y.values[sortMeasure]) * (q.sort.dir === 'asc' ? 1 : -1));
+      else list.sort((x, y) => x.key < y.key ? -1 : x.key > y.key ? 1 : 0);
+      if (q.limit) list = list.slice(0, q.limit);
+
+      return {
+        type: 'table',
+        columns: [{ label: group.label, wrap: true }, ...measures.map(m => ({ label: MEASURES[m].label, num: true }))],
+        rows: list.map(g => [g.label, ...measures.map(m => MEASURES[m].show(g.values[m]))])
+      };
+    }
+
+    // The question mentioned numbers or conditions, but nothing could be used as a filter
+    function nothingApplied(q, text) {
+      return !q.conds.length && !q.limit && /\d|%|above|below|between|less|more|greater|over|under|starting|contain|named|before|after|since|from/i.test(text);
     }
 
     // ---- Excel / PDF export ----
     const EXPORT_HEAD = ['Sl.No', 'Organization / Name', 'PAN Number', 'Amount (₹)', 'Tax (₹)', 'Deduction (%)', 'Date of Entry'];
 
+    // Rows in register form ({ pan_number, name, amount, ... }) -> downloaded .xlsx with a TOTAL row
+    async function saveExcel(rows, fileName) {
+      await loadScript(XLSX_URL);
+      const sheetRows = [EXPORT_HEAD];
+      rows.forEach((e, i) => sheetRows.push([
+        i + 1, e.name || '', e.pan_number, Number(e.amount) || 0, Number(e.tax_amount) || 0, Number(e.deduction_percentage) || 0, e.date || ''
+      ]));
+      sheetRows.push([], ['', 'TOTAL', '', sumOf(rows, 'amount'), sumOf(rows, 'tax_amount'), '', '']);
+      const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+      ws['!cols'] = [{ wch: 7 }, { wch: 32 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 13 }, { wch: 13 }];
+      for (let r = 2; r <= sheetRows.length; r++) {
+        ['D', 'E'].forEach(col => { const c = ws[col + r]; if (c && c.t === 'n') c.z = '#,##0.00'; });
+      }
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'PAN Entries');
+      XLSX.writeFile(wb, fileName);
+    }
+
     async function exportEntries(a) {
       const format = a.format === 'pdf' ? 'pdf' : 'excel';
-      const rows = await fetchAllEntries(a);
+      const rows = await fetchAllEntries(normalizeQuery(a));
       if (!rows.length) return 'No entries match (' + describeFilters(a) + '), so there is nothing to export.';
 
       const totalAmount = rows.reduce((s, e) => s + (Number(e.amount) || 0), 0);
@@ -1686,20 +1918,7 @@ Never claim success in reply; the app reports results.`;
       const fileName = 'PAN_Entries_' + new Date().toISOString().slice(0, 10) + (format === 'pdf' ? '.pdf' : '.xlsx');
 
       if (format === 'excel') {
-        await loadScript(XLSX_URL);
-        const sheetRows = [EXPORT_HEAD];
-        rows.forEach((e, i) => sheetRows.push([
-          i + 1, e.name || '', e.pan_number, Number(e.amount) || 0, Number(e.tax_amount) || 0, Number(e.deduction_percentage) || 0, e.date || ''
-        ]));
-        sheetRows.push([], ['', 'TOTAL', '', totalAmount, totalTax, '', '']);
-        const ws = XLSX.utils.aoa_to_sheet(sheetRows);
-        ws['!cols'] = [{ wch: 7 }, { wch: 32 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 13 }, { wch: 13 }];
-        for (let r = 2; r <= sheetRows.length; r++) {
-          ['D', 'E'].forEach(col => { const c = ws[col + r]; if (c && c.t === 'n') c.z = '#,##0.00'; });
-        }
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'PAN Entries');
-        XLSX.writeFile(wb, fileName);
+        await saveExcel(rows, fileName);
       } else {
         await loadScript(JSPDF_URL);
         await loadScript(AUTOTABLE_URL);
@@ -1709,7 +1928,9 @@ Never claim success in reply; the app reports results.`;
         doc.setFontSize(16);
         doc.text('PAN Entries Report', 14, 20);
         doc.setFontSize(10);
-        doc.text('Generated: ' + new Date().toLocaleString('en-IN') + '   |   Filter: ' + describeFilters(a), 14, 27);
+        // The PDF's built-in font has no ₹ ≥ ≤ ≠ glyphs
+        const pdfFilter = describeFilters(a).replace(/₹/g, 'Rs. ').replace(/≥/g, '>=').replace(/≤/g, '<=').replace(/≠/g, '!=');
+        doc.text('Generated: ' + new Date().toLocaleString('en-IN') + '   |   Filter: ' + pdfFilter, 14, 27);
         doc.autoTable({
           head: [EXPORT_HEAD.map(h => h.replace('₹', 'Rs.'))],
           body: rows.map((e, i) => [i + 1, e.name || '', e.pan_number, rs(e.amount), rs(e.tax_amount), (e.deduction_percentage ?? 0) + '%', e.date || '']),
@@ -1828,7 +2049,7 @@ Never claim success in reply; the app reports results.`;
         } else if (db.some(e => e.date === r.date && Number(e.amount) === Number(r.amount || 0))) {
           return skip(r, `A ${money(r.amount)} entry dated ${r.date} already exists for ${r.pan}.`);
         } else if (earlier?.keys.has(key)) {
-          return skip(r, 'Repeated earlier in this file.');
+          return skip(r, REPEATED_IN_FILE);
         } else {
           // Like Full Entry: fill in the latest Quick Entry (no date yet) instead of adding a second row
           const skeleton = db.find(e => e.date === null && !claimed.has(e.id));
@@ -1912,30 +2133,39 @@ Never claim success in reply; the app reports results.`;
         }
 
         case 'search': {
-          const { data, error } = await applyFilters(supabase.from('entries').select('*'), a)
-            .order('created_at', { ascending: false })
-            .limit(MAX_ROWS);
+          const q = normalizeQuery(a);
+          const shown = Math.min(q.limit || MAX_ROWS, MAX_ROWS);
+          let query = applyConds(supabase.from('entries').select('*', { count: 'exact' }), q.conds);
+          query = q.sort && q.sort.field ? orderQuery(query, q) : query.order('created_at', { ascending: false });
+          const { data, error, count } = await query.limit(shown);
           if (error) return say('I couldn\'t load the entries: ' + error.message);
-          if (!data.length) return say(`I didn't find any entries (${describeFilters(a)}).`);
-          return {
-            blocks: [
-              T(data.length === 1 ? 'I found **1 entry**.' : `I found **${data.length} entries**${data.length === MAX_ROWS ? ' (showing the latest ' + MAX_ROWS + ')' : ''}.`),
-              entriesTable(data, data.length === MAX_ROWS ? 'Ask for an Excel or PDF file to get the full list.' : '')
-            ]
-          };
+          const blocks = [];
+          if (!data.length) {
+            blocks.push(T('I didn\'t find any entries that match.'), filterBlock(q));
+          } else {
+            const total = q.limit ? Math.min(count ?? data.length, q.limit) : (count ?? data.length);
+            blocks.push(
+              T(`I found **${plural(total)}**${total > data.length ? ` (showing the first ${data.length})` : ''}.`),
+              filterBlock(q),
+              entriesTable(data, total > data.length ? 'Ask for an Excel or PDF file to get the full list.' : '')
+            );
+          }
+          if (nothingApplied(q, ctx.text)) blocks.push({ type: 'note', text: 'I couldn\'t turn part of your question into a filter, so this is everything. Try saying it another way, for example "deduction exactly 2%".' });
+          return { blocks };
         }
 
         case 'summary': {
-          const rows = await fetchAllEntries(a);
-          if (!rows.length) return say(`There are no entries to total (${describeFilters(a)}).`);
-          const totalAmount = rows.reduce((s, e) => s + (Number(e.amount) || 0), 0);
-          const totalTax = rows.reduce((s, e) => s + (Number(e.tax_amount) || 0), 0);
-          return {
-            blocks: [
-              T(`Here are the totals for ${describeFilters(a) === 'all entries' ? '**all entries**' : '**' + describeFilters(a) + '**'}:`),
-              { type: 'stats', items: [{ label: 'Entries', value: rows.length.toLocaleString('en-IN') }, { label: 'Total amount', value: money(totalAmount) }, { label: 'Total tax', value: money(totalTax) }] }
-            ]
-          };
+          const q = normalizeQuery(a);
+          const rows = await fetchAllEntries(q.sort && q.sort.measure ? { ...q, limit: null } : q);
+          if (!rows.length) return { blocks: [T('There are no matching entries to total.'), filterBlock(q)] };
+          const result = summarize(rows, a, q);
+          const blocks = [
+            T(result.type === 'table' ? `Here it is by **${GROUPS[a.group_by].label.toLowerCase()}**:` : 'Here are the totals:'),
+            filterBlock(q),
+            result
+          ];
+          if (nothingApplied(q, ctx.text)) blocks.push({ type: 'note', text: 'I couldn\'t turn part of your question into a filter, so these totals cover everything.' });
+          return { blocks };
         }
 
         case 'update': {
@@ -2004,6 +2234,20 @@ Never claim success in reply; the app reports results.`;
           return { blocks: [T(`Done. I deleted ${plural(data.length)} for **${pan}**.`), entriesTable(picked.rows)] };
         }
 
+        case 'dedupe': {
+          const q = normalizeQuery(a);
+          const dupes = findRegisterDuplicates(await fetchAllEntries({ ...q, sort: null, limit: null }));
+          if (!dupes.length) return { blocks: [T('I didn\'t find any duplicate entries, so nothing needs removing.'), filterBlock(q)] };
+          const request = { where: a.where, pan: a.pan, pan_prefix: a.pan_prefix, name: a.name };
+          return {
+            blocks: [
+              T(`I found **${plural(dupes.length)}** that ${dupes.length === 1 ? 'is an exact repeat' : 'are exact repeats'} of another entry (same PAN, name, amount and date). The first copy of each stays; these extra copies can be removed. Nothing is deleted until you press the button.`),
+              filterBlock(q),
+              { type: 'dedupe', request, rows: dupes.map(e => ({ id: e.id, pan_number: e.pan_number, name: e.name, date: e.date, amount: e.amount, tax_amount: e.tax_amount })), done: null }
+            ]
+          };
+        }
+
         case 'export': {
           const request = { ...a, format: a.format === 'pdf' ? 'pdf' : 'excel' };
           delete request.reply;
@@ -2011,7 +2255,8 @@ Never claim success in reply; the app reports results.`;
           if (typeof result === 'string') return say(result);
           return {
             blocks: [
-              T(`Here's your ${request.format === 'pdf' ? 'PDF' : 'Excel file'} with ${plural(result.count)} (${describeFilters(request)}). It should be in your downloads already. Total amount ${money(result.totalAmount)}, total tax ${money(result.totalTax)}.`),
+              T(`Here's your ${request.format === 'pdf' ? 'PDF' : 'Excel file'} with ${plural(result.count)}. It should be in your downloads already. Total amount ${money(result.totalAmount)}, total tax ${money(result.totalTax)}.`),
+              filterBlock(normalizeQuery(request)),
               { type: 'file', fileName: result.fileName, format: request.format, count: result.count, request }
             ]
           };
@@ -2131,6 +2376,20 @@ Never claim success in reply; the app reports results.`;
     function rowsFromGrid(grid) {
       const out = [];
       let map = null;
+      // Read one row using the header's column positions
+      const fromHeader = (cells, line, pan) => {
+        const get = (k) => map[k] != null ? cells[map[k]] : '';
+        const rawDate = get('date');
+        return {
+          pan,
+          name: String(get('name')).trim(),
+          date: rawDate === '' ? null : (normDate(rawDate) || String(rawDate)),
+          amount: parseNum(get('amount')),
+          tax_amount: parseNum(get('tax')),
+          deduction_percentage: parseNum(get('ded')),
+          line
+        };
+      };
       grid.forEach(rawRow => {
         const cells = (rawRow || []).map(c => c instanceof Date ? c : String(c ?? '').trim());
         if (!cells.some(c => c !== '')) return;
@@ -2139,25 +2398,15 @@ Never claim success in reply; the app reports results.`;
           // A mistyped PAN under a PAN column is shown as a problem row instead of being dropped
           const badPan = map && map.name != null && String(cells[map.pan] ?? '').trim();
           if (badPan && /^[A-Z0-9]{6,14}$/i.test(badPan) && String(cells[map.name] ?? '').trim()) {
-            out.push({ pan: badPan.toUpperCase(), name: String(cells[map.name]).trim(), line });
+            out.push(fromHeader(cells, line, badPan.toUpperCase()));
             return;
           }
           map = headerMap(cells) || map;   // header, title or totals row
           return;
         }
         if (map && map.name != null) {
-          const get = (k) => map[k] != null ? cells[map[k]] : '';
-          const panCell = String(get('pan')).toUpperCase().match(PAN_RE);
-          const rawDate = get('date');
-          out.push({
-            pan: panCell ? panCell[1] : (line.toUpperCase().match(PAN_RE) || [])[1],
-            name: String(get('name')).trim(),
-            date: rawDate === '' ? null : (normDate(rawDate) || String(rawDate)),
-            amount: parseNum(get('amount')),
-            tax_amount: parseNum(get('tax')),
-            deduction_percentage: parseNum(get('ded')),
-            line
-          });
+          const panCell = String(cells[map.pan] ?? '').toUpperCase().match(PAN_RE);
+          out.push(fromHeader(cells, line, panCell ? panCell[1] : (line.toUpperCase().match(PAN_RE) || [])[1]));
         } else {
           out.push(rowFromCells(cells, line));
         }
@@ -2276,7 +2525,16 @@ Copy values exactly from the line and leave out any field that isn't on it. Date
       }
     }
 
-    async function handleFile(file, onStatus) {
+    // Words sent with a file: "analyse" -> summary only, "remove duplicates" -> cleaned file, anything else -> import preview
+    function fileIntent(text) {
+      const t = String(text || '');
+      const analyse = /analy[sz]|summar|overview|stat(s|istic)|insight|review|tell me about|what('?s| is) in|look (at|through)|check (it|this|the file)/i.test(t);
+      const clean = /dedup|de-dup|(remove|delete|drop|clean|get rid of|strip|take out)\b.*\b(dup|double|repeat|same|copies)|(dup\w*|doubles?|repeat\w*|copies)\b.*\b(remove|delete|drop|clean|out)|clean (it|this|the file|up)/i.test(t);
+      return { analyse, clean };
+    }
+
+    async function handleFile(file, text, onStatus) {
+      const intent = fileIntent(text);
       const rows = await readFileRows(file, onStatus);
       if (!rows.length) return say(`I couldn't find any PAN entries in **${file.name}**. Each row needs a PAN (like ABCDE1234F) and a name.`);
       if (rows.length > MAX_IMPORT_ROWS) return say(`**${file.name}** has ${rows.length} rows. Please split it into files of up to ${MAX_IMPORT_ROWS} rows.`);
@@ -2286,6 +2544,13 @@ Copy values exactly from the line and leave out any field that isn't on it. Date
 
       onStatus('Checking for duplicates…');
       const plan = await planEntries(rows);
+      if (intent.analyse || intent.clean) {
+        const blocks = [];
+        if (intent.analyse) blocks.push(...analyseFile(file.name, rows, plan));
+        if (intent.clean) blocks.push(...cleanFile(file.name, rows, plan));
+        blocks.push({ type: 'note', text: 'Nothing was saved to your register. To add the new rows, attach the file again and send it on its own (or say "import").' });
+        return { blocks };
+      }
       const block = {
         type: 'import',
         fileName: file.name,
@@ -2293,10 +2558,164 @@ Copy values exactly from the line and leave out any field that isn't on it. Date
         done: null
       };
       const ready = plan.filter(r => r.status === 'add' || r.status === 'fill').length;
-      let text = `I read **${file.name}** and found **${plural(rows.length, 'row')}**.`;
-      if (unclear.length) text += ` ${plural(unclear.length, 'line')} had an unusual layout, so the AI helped read ${unclear.length === 1 ? 'it' : 'them'}. Please double-check ${unclear.length === 1 ? 'that row' : 'those rows'}.`;
-      text += ready ? ' Nothing is saved yet. Review the rows below, then press **Add** to save the new ones.' : '';
-      return { blocks: [T(text), block] };
+      let message = `I read **${file.name}** and found **${plural(rows.length, 'row')}**.`;
+      if (unclear.length) message += ` ${plural(unclear.length, 'line')} had an unusual layout, so the AI helped read ${unclear.length === 1 ? 'it' : 'them'}. Please double-check ${unclear.length === 1 ? 'that row' : 'those rows'}.`;
+      message += ready ? ' Nothing is saved yet. Review the rows below, then press **Add** to save the new ones.' : '';
+      return { blocks: [T(message), block] };
+    }
+
+    // Same rule as the register's duplicates: same PAN, date and amount (or a repeated PAN-and-name-only row)
+    const fileRowKey = (r) => r.pan + '|' + (r.date || '') + '|' + (isNum(r.amount) ? r.amount : 0);
+
+    function analyseFile(fileName, rows, plan) {
+      const count = (fn) => plan.filter(fn).length;
+      const repeated = count(r => r.status === 'skip' && r.reason === REPEATED_IN_FILE);
+      const inRegister = count(r => r.status === 'skip') - repeated;
+      const problems = count(r => r.status === 'error');
+      const fresh = count(r => r.status === 'add' || r.status === 'fill');
+      const dates = rows.map(r => r.date).filter(d => d && isRealDate(d)).sort();
+      const pans = new Map();
+      plan.forEach(r => { if (isValidPAN(r.pan)) { const p = pans.get(r.pan) || { name: r.name, n: 0 }; p.n++; pans.set(r.pan, p); } });
+      const numbers = (k) => rows.reduce((sum, r) => sum + (isNum(r[k]) ? r[k] : 0), 0);
+
+      const blocks = [
+        T(`Here's what's in **${fileName}**: **${plural(rows.length, 'row')}** for **${plural(pans.size, 'PAN')}**` +
+          (dates.length ? `, dated ${dates[0]} to ${dates[dates.length - 1]}` : '') + '.'),
+        { type: 'stats', items: [
+          { label: 'Rows', value: rows.length.toLocaleString('en-IN') },
+          { label: 'Total amount', value: money(numbers('amount')) },
+          { label: 'Total tax', value: money(numbers('tax_amount')) },
+          { label: 'New for your register', value: fresh.toLocaleString('en-IN') }
+        ] },
+        T([
+          `• **${fresh}** new` + (count(r => r.status === 'fill') ? ` (${count(r => r.status === 'fill')} complete a Quick Entry)` : ''),
+          `• **${inRegister}** already in your register`,
+          `• **${repeated}** repeated within the file`,
+          `• **${problems}** with problems`
+        ].join('\n'))
+      ];
+
+      const multi = [...pans.entries()].filter(([, p]) => p.n > 1).sort((x, y) => y[1].n - x[1].n).slice(0, 5);
+      if (multi.length) {
+        blocks.push(T('PANs that appear more than once:'), {
+          type: 'table',
+          columns: [{ label: 'PAN', mono: true }, { label: 'Name', wrap: true }, { label: 'Rows', num: true }],
+          rows: multi.map(([pan, p]) => [pan, p.name, String(p.n)])
+        });
+      }
+
+      const issues = plan.map((r, i) => ({ r, i })).filter(({ r }) => r.status === 'skip' || r.status === 'error');
+      if (issues.length) {
+        blocks.push(T('Rows that need attention:'), {
+          type: 'table',
+          columns: [{ label: 'Row', num: true }, { label: 'Status' }, { label: 'PAN', mono: true }, { label: 'Name', wrap: true }, { label: 'Date' }, { label: 'Amount', num: true }],
+          rows: issues.slice(0, 50).map(({ r, i }) => [String(i + 1), { pill: r.status, text: statusLabel(r), reason: r.reason }, r.pan, r.name, r.date || '', isNum(r.amount) ? money(r.amount) : (r.amount ?? '')]),
+          note: issues.length > 50 ? `Showing the first 50 of ${issues.length}.` : ''
+        });
+      }
+      return blocks;
+    }
+
+    // Remove rows repeated within the file; keeps the first copy and every other row (problem rows included)
+    function cleanFile(fileName, rows, plan) {
+      const seen = new Set();
+      const kept = [];
+      const removed = [];
+      rows.forEach((r, i) => {
+        const pan = String(plan[i].pan || '').toUpperCase();
+        const key = isValidPAN(pan) ? fileRowKey({ ...r, pan }) : null;
+        if (key && seen.has(key)) removed.push({ r, i, pan });
+        else { if (key) seen.add(key); kept.push({ r, pan }); }
+      });
+      if (!removed.length) return [T(`I didn't find any repeated rows in **${fileName}**, so there's nothing to remove.`)];
+
+      const cleanName = fileName.replace(/\.[^.]+$/, '') + '_cleaned.xlsx';
+      const cleanRows = kept.map(({ r, pan }) => ({
+        pan_number: pan, name: String(r.name || '').trim(), date: r.date || '',
+        amount: isNum(r.amount) ? r.amount : 0, tax_amount: isNum(r.tax_amount) ? r.tax_amount : 0,
+        deduction_percentage: isNum(r.deduction_percentage) ? r.deduction_percentage : 0
+      }));
+      const inRegister = plan.filter(r => r.status === 'skip' && r.reason !== REPEATED_IN_FILE).length;
+      return [
+        T(`I removed **${plural(removed.length, 'repeated row')}** from **${fileName}**. The cleaned file has **${plural(cleanRows.length, 'row')}**.` +
+          (inRegister ? ` ${plural(inRegister, 'row')} ${inRegister === 1 ? 'is' : 'are'} already in your register; I kept ${inRegister === 1 ? 'it' : 'them'} in the file, and ${inRegister === 1 ? 'it' : 'they'} will be skipped if you import it.` : '')),
+        { type: 'file', fileName: cleanName, format: 'excel', rows: cleanRows },
+        T('Rows I removed:'),
+        {
+          type: 'table',
+          columns: [{ label: 'Row', num: true }, { label: 'PAN', mono: true }, { label: 'Name', wrap: true }, { label: 'Date' }, { label: 'Amount', num: true }],
+          rows: removed.slice(0, 50).map(({ r, i, pan }) => [String(i + 1), pan, r.name, r.date || '', isNum(r.amount) ? money(r.amount) : '']),
+          note: removed.length > 50 ? `Showing the first 50 of ${removed.length}.` : ''
+        }
+      ];
+    }
+
+    // ---- Duplicates already in the register ----
+    // Same rule as the Display page: same PAN, name, amount and date. The oldest copy stays.
+    function findRegisterDuplicates(rows) {
+      const seen = new Set();
+      return [...rows]
+        .sort((x, y) => String(x.created_at || '').localeCompare(String(y.created_at || '')))
+        .filter(e => {
+          const key = e.pan_number + '|' + normName(e.name) + '|' + Number(e.amount) + '|' + (e.date || '');
+          if (seen.has(key)) return true;
+          seen.add(key);
+          return false;
+        });
+    }
+
+    function renderDedupe(b, msg) {
+      const box = el('div');
+      box.style.display = 'grid';
+      box.style.gridTemplateColumns = 'minmax(0, 1fr)';
+      box.style.gap = '12px';
+      box.appendChild(renderTable({
+        columns: [{ label: 'PAN', mono: true }, { label: 'Name', wrap: true }, { label: 'Date' }, { label: 'Amount', num: true }, { label: 'Tax', num: true }],
+        rows: b.rows.slice(0, 200).map(e => [e.pan_number, e.name || '', e.date || '', money(e.amount), money(e.tax_amount)]),
+        note: b.rows.length > 200 ? `Showing the first 200 of ${b.rows.length}.` : ''
+      }));
+      const footer = el('div', 'q-import-footer');
+      if (b.done) {
+        const done = el('span', 'q-pill done');
+        done.append(icon('check', 12), document.createTextNode(b.done.removed ? `Removed ${plural(b.done.removed)}` : 'Nothing needed removing'));
+        footer.appendChild(done);
+      } else {
+        const btn = el('button', 'q-btn primary', `Remove ${plural(b.rows.length, 'duplicate')}`);
+        btn.type = 'button';
+        btn.addEventListener('click', () => commitDedupe(b, msg, btn));
+        footer.append(btn, el('span', null, 'The first copy of each entry stays.'));
+      }
+      box.appendChild(footer);
+      return box;
+    }
+
+    async function commitDedupe(block, msg, btn) {
+      if (busy) return;
+      const n = block.rows.length;
+      if (!confirm(`Delete ${n} duplicate ${n === 1 ? 'entry' : 'entries'}? The first copy of each stays. This cannot be undone.`)) return;
+      busy = true;
+      updateSendState();
+      btn.disabled = true;
+      btn.textContent = 'Removing…';
+      try {
+        // Check again right before deleting, and only delete rows that are still extra copies
+        const fresh = findRegisterDuplicates(await fetchAllEntries({ ...normalizeQuery(block.request || {}), sort: null, limit: null }));
+        const ids = fresh.map(e => e.id).filter(id => block.rows.some(r => r.id === id));
+        let removed = 0;
+        for (let i = 0; i < ids.length; i += 200) {
+          const { data, error } = await supabase.from('entries').delete().in('id', ids.slice(i, i + 200)).select('id');
+          if (error) throw new Error(error.message);
+          removed += data.length;
+        }
+        block.done = { removed };
+      } catch (err) {
+        alert('Removing duplicates failed: ' + err.message);
+      }
+      saveChats();
+      const node = btn.closest('.q-msg');
+      if (node) node.replaceWith(renderMessage(msg));
+      busy = false;
+      updateSendState();
     }
 
     async function commitImport(block, msg, btn) {
@@ -2377,7 +2796,7 @@ Copy values exactly from the line and leave out any field that isn't on it. Date
 
       let reply;
       try {
-        reply = file ? await handleFile(file, onStatus) : await handleText(text, history, onStatus);
+        reply = file ? await handleFile(file, text, onStatus) : await handleText(text, history, onStatus);
       } catch (err) {
         reply = say('Sorry, something went wrong: ' + err.message);
       }
