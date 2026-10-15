@@ -160,6 +160,14 @@
       }
     }
 
+    // Signed in: the button says Welcome, then the same ring transition as Koda into the website
+    function welcomeAndGo(btn) {
+      toast.classList.remove('show');   // clear any earlier error message
+      btn.disabled = true;
+      btn.textContent = 'Welcome';
+      kodaGo(redirectTo, btn, '#eef2ff');
+    }
+
     function switchToLogin() {
       isLoginMode = true;
       loginForm.classList.add('active');
@@ -218,10 +226,7 @@
       }
 
       if (data.session) {
-        showToast('Signed in successfully!', 'success');
-        setTimeout(() => {
-          window.location.href = redirectTo;
-        }, 500);
+        welcomeAndGo(submitBtn);
       }
     });
 
@@ -268,10 +273,7 @@
       // If email confirmation is OFF, user is auto-signed in (data.session exists)
       // If email confirmation is ON, data.session is null, data.user exists
       if (data.session) {
-        showToast('Account created! Signing in...', 'success');
-        setTimeout(() => {
-          window.location.href = redirectTo;
-        }, 500);
+        welcomeAndGo(signupSubmitBtn);
       } else if (data.user) {
         // Email confirmation required (shouldn't happen with our config, but handle it)
         showToast('Account created! Please check your email to confirm.', 'success');
