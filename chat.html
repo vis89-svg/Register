@@ -892,7 +892,6 @@
     // ---- Saved chats (kept in this browser, separately for each user) ----
     const userId = session?.user?.id || 'anon';
     const CHATS_KEY = 'pansorter_chats_' + userId;
-    const ACTIVE_KEY = 'pansorter_active_chat_' + userId;
 
     // Older chats stored plain text; convert them to the block format
     function normalizeMessage(m) {
@@ -926,8 +925,6 @@
       while (true) {
         try {
           localStorage.setItem(CHATS_KEY, JSON.stringify(chats));
-          if (activeId) localStorage.setItem(ACTIVE_KEY, activeId);
-          else localStorage.removeItem(ACTIVE_KEY);
           return;
         } catch (e) {
           if (chats.length <= 1) return;
@@ -2222,7 +2219,9 @@ Copy values exactly from the line and leave out any field that isn't on it. Date
 
     document.getElementById('logoutBtn').addEventListener('click', async function () {
       await supabase.auth.signOut();
-      window.location.href = 'koda-login.html';
+      // Leave with the same ring transition as the welcome page
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      kodaGo('index.html', this, dark ? '#000000' : '#ffffff', true);
     });
 
     // ---- Start ----
@@ -2232,10 +2231,8 @@ Copy values exactly from the line and leave out any field that isn't on it. Date
     const hour = new Date().getHours();
     $('greeting').textContent = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
-    // Resume where the user left off
-    let lastActive = null;
-    try { lastActive = localStorage.getItem(ACTIVE_KEY); } catch (e) {}
-    openChat(lastActive || (chats[0] && chats[0].id));
+    // Always start on a fresh chat; earlier chats stay in the sidebar under Recents
+    openChat(null);
   </script>
 
 </body>

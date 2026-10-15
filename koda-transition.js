@@ -36,15 +36,19 @@
     '.k-wipe { position: fixed; z-index: 9999; border-radius: 50%; pointer-events: none;' +
     '  transform: translate(-50%, -50%) scale(0); transition: transform 0.7s cubic-bezier(0.7, 0, 0.25, 1);' +
     '  box-shadow: 0 0 0 5px ' + NEON + '; }' +
-    '.k-wipe.grow { transform: translate(-50%, -50%) scale(1); }';
+    '.k-wipe.grow { transform: translate(-50%, -50%) scale(1); }' +
+    '.k-fade body > *:not(.k-wipe) { transition: opacity 0.4s ease, filter 0.4s ease, transform 0.45s ease;' +
+    '  opacity: 0; filter: blur(8px); transform: scale(0.985); }';
   document.head.appendChild(css);
 
   // ---- Leaving: lines blur away, then a neon-edged circle fills the screen from the clicked link ----
-  window.kodaGo = function (url, fromEl, color) {
+  // fadePage: also blur the whole page away (used by Logout on pages without their own leaving styles)
+  window.kodaGo = function (url, fromEl, color, fadePage) {
     try { sessionStorage.setItem('koda-arrive', '1'); } catch (e) {}
     if (reduceMotion) { window.location.href = url; return; }
 
     root.classList.add('k-leaving');
+    if (fadePage) root.classList.add('k-fade');
     if (fromEl) fromEl.classList.add('k-chosen');
 
     var r = fromEl ? fromEl.getBoundingClientRect() : { left: innerWidth / 2, top: innerHeight / 2, width: 0, height: 0 };
@@ -67,7 +71,7 @@
   // Coming back with the browser's Back button: undo the transition
   window.addEventListener('pageshow', function (e) {
     if (!e.persisted) return;
-    root.classList.remove('k-leaving', 'k-wiping');
+    root.classList.remove('k-leaving', 'k-wiping', 'k-fade');
     document.querySelectorAll('.k-wipe').forEach(function (w) { w.remove(); });
     document.querySelectorAll('.k-chosen').forEach(function (el) { el.classList.remove('k-chosen'); });
   });

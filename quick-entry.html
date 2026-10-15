@@ -8,6 +8,7 @@
   <title>PAN Sorter - Quick Entry</title>
   <link rel="stylesheet" href="style.css">
   <script src="nav-menu.js" defer></script>
+  <script src="koda-transition.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -1440,7 +1441,9 @@
 
     document.getElementById('logoutBtn').addEventListener('click', async function () {
       await supabase.auth.signOut();
-      window.location.href = 'login.html';
+      // Leave with the same ring transition as the welcome page
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      kodaGo('index.html', this, dark ? '#000000' : '#ffffff', true);
     });
   </script>
 

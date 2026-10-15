@@ -198,17 +198,6 @@
       text-align: center;
     }
 
-    /* Footer inside the login card */
-    .card-foot {
-      margin-top: 6px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border);
-      font-size: 0.88rem;
-      text-align: center;
-    }
-
-    .card-foot a.back { color: var(--text); text-decoration: none; }
-    .card-foot a.back span { color: #ffd400; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -239,7 +228,6 @@
       </div>
       <button type="submit" class="continue" id="continueBtn">Continue</button>
       <p class="error" id="error" role="alert"></p>
-      <p class="card-foot"><a href="index.html" id="backLink" class="back">Back to <span>Website</span></a></p>
     </form>
 
   </main>
@@ -270,7 +258,7 @@
 
     // Links leave with the same transition as the welcome page
     const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
-    [['homeLink', () => isDark() ? '#000000' : '#ffffff'], ['backLink', () => isDark() ? '#000000' : '#ffffff']]
+    [['homeLink', () => isDark() ? '#000000' : '#ffffff']]
       .forEach(([id, color]) => {
         const link = document.getElementById(id);
         link.addEventListener('click', (e) => {
