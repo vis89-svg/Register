@@ -1,2 +1,3 @@
 # Secrets for Supabase Edge Functions (never commit)
 supabase/functions/.env
+supabase/.temp/
