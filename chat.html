@@ -48,6 +48,7 @@
       --pill-fill-bg: #e4edf7; --pill-fill: #2a5a8a;
       --pill-skip-bg: #eeebe3; --pill-skip: #6b6a63;
       --pill-error-bg: #f8e4df; --pill-error: #a3392a;
+      --q-warn-bg: #fdf3dc; --q-warn: #8a5a00;
       --q-serif: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
       --q-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
@@ -87,6 +88,7 @@
       --pill-fill-bg: #142538; --pill-fill: #8bb8e8;
       --pill-skip-bg: #232323; --pill-skip: #a3a097;
       --pill-error-bg: #3a1a16; --pill-error: #ff8a7a;
+      --q-warn-bg: #2e2410; --q-warn: #f5c96a;
     }
 
     /* The flower logo is black; show it white on dark */
@@ -439,6 +441,61 @@
     }
 
     .q-msg.assistant:hover .q-actions { opacity: 1; }
+
+    /* Your messages: Copy / Edit appear on hover; the version switcher is always shown */
+    .q-msg.user { gap: 4px; margin-bottom: 22px; }
+    .q-user-actions { opacity: 1; justify-content: flex-end; align-items: center; margin-top: 2px; }
+    .q-user-actions > .q-icon-btn { opacity: 0; transition: opacity 0.15s; }
+    .q-msg.user:hover .q-user-actions > .q-icon-btn,
+    .q-user-actions > .q-icon-btn:focus-visible { opacity: 1; }
+
+    .q-versions {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      margin-right: 4px;
+      font: 500 0.78rem var(--q-sans);
+      color: var(--q-muted);
+    }
+
+    .q-versions .q-icon-btn { width: 26px; height: 26px; }
+    .q-versions .q-icon-btn:disabled { opacity: 0.35; cursor: default; background: transparent; }
+    .q-version-label { min-width: 36px; text-align: center; font-variant-numeric: tabular-nums; }
+
+    /* Editing a message */
+    .q-msg.user.editing { align-items: stretch; }
+
+    .q-edit {
+      width: 100%;
+      background: var(--q-card);
+      border: 1px solid var(--q-border-strong);
+      border-radius: 16px;
+      padding: 12px 14px;
+      box-shadow: 0 4px 20px var(--q-shadow);
+    }
+
+    .q-edit textarea {
+      display: block;
+      width: 100%;
+      border: none;
+      outline: none;
+      resize: none;
+      background: transparent;
+      color: var(--q-text);
+      font: 400 1rem/1.5 var(--q-sans);
+      max-height: 240px;
+    }
+
+    .q-edit-warning {
+      margin-top: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: var(--q-warn-bg);
+      color: var(--q-warn);
+      font: 400 0.82rem/1.45 var(--q-sans);
+    }
+
+    .q-edit-buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
     .q-actions .q-icon-btn { width: 28px; height: 28px; }
 
     /* Thinking indicator */
@@ -797,6 +854,10 @@
       .q-bubble, .q-user-files { max-width: 90%; }
       .q-msg.assistant { font-size: 1rem; }
       .q-actions { opacity: 1; }
+      /* Phones have no hover: Copy / Edit are always shown, a little faint, with bigger tap targets */
+      .q-user-actions > .q-icon-btn { opacity: 0.7; width: 34px; height: 34px; }
+      .q-versions .q-icon-btn { width: 32px; height: 32px; }
+      .q-edit-buttons .q-btn { flex: 1; justify-content: center; padding: 11px 14px; font-size: 0.95rem; }
       .q-item-delete { opacity: 1; }
     }
   </style>
@@ -941,7 +1002,10 @@
         check: '<polyline points="20 6 9 17 4 12"/>',
         trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/>',
         download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
-        x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'
+        x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+        edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+        left: '<polyline points="15 18 9 12 15 6"/>',
+        right: '<polyline points="9 18 15 12 9 6"/>'
       };
       const span = el('span');
       span.style.display = 'inline-flex';
@@ -1060,11 +1124,20 @@
       $('chatTitle').textContent = chat ? chat.title : '';
     }
 
+    // Draw the open chat's messages; keepScroll stays at the same place (used when switching versions)
+    function renderActiveChat(keepScroll) {
+      const chat = getChat(activeId);
+      const top = scroller.scrollTop;
+      chatMessages.textContent = '';
+      if (chat) chat.messages.forEach(m => chatMessages.appendChild(renderMessage(m)));
+      if (keepScroll) scroller.scrollTop = top;
+      else scrollToBottom();
+    }
+
     function openChat(id) {
       const chat = id ? getChat(id) : null;
       activeId = chat ? chat.id : null;
-      chatMessages.textContent = '';
-      if (chat) chat.messages.forEach(m => chatMessages.appendChild(renderMessage(m)));
+      renderActiveChat();
       setEmptyState();
       saveChats();
       renderChatList();
@@ -1264,6 +1337,7 @@
           row.appendChild(files);
         }
         if (m.text) row.appendChild(el('div', 'q-bubble', m.text));
+        row.appendChild(userActions(m, row));
         return row;
       }
 
@@ -1273,20 +1347,137 @@
       row.appendChild(body);
 
       const actions = el('div', 'q-actions');
-      const copy = el('button', 'q-icon-btn');
-      copy.type = 'button';
-      copy.title = 'Copy';
-      copy.appendChild(icon('copy', 15));
-      copy.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(blocksToText(m.blocks));
-          copy.replaceChildren(icon('check', 15));
-          setTimeout(() => copy.replaceChildren(icon('copy', 15)), 1500);
-        } catch (e) {}
-      });
-      actions.appendChild(copy);
+      actions.appendChild(copyButton(() => blocksToText(m.blocks)));
       row.appendChild(actions);
       return row;
+    }
+
+    function iconButton(name, title, onClick) {
+      const b = el('button', 'q-icon-btn');
+      b.type = 'button';
+      b.title = title;
+      b.setAttribute('aria-label', title);
+      b.appendChild(icon(name, 15));
+      b.addEventListener('click', onClick);
+      return b;
+    }
+
+    function copyButton(getText) {
+      const b = iconButton('copy', 'Copy', async () => {
+        try {
+          await navigator.clipboard.writeText(getText());
+          b.replaceChildren(icon('check', 15));
+          setTimeout(() => b.replaceChildren(icon('copy', 15)), 1500);
+        } catch (e) {}
+      });
+      return b;
+    }
+
+    // ‹ 1/2 › switcher (once edited), Copy and Edit under your own messages
+    function userActions(m, row) {
+      const bar = el('div', 'q-actions q-user-actions');
+      if (m.versions && m.versions.length > 1) {
+        const switcher = el('div', 'q-versions');
+        const prev = iconButton('left', 'Previous version', () => switchVersion(m, m.v - 1));
+        const next = iconButton('right', 'Next version', () => switchVersion(m, m.v + 1));
+        prev.disabled = m.v === 0;
+        next.disabled = m.v === m.versions.length - 1;
+        switcher.append(prev, el('span', 'q-version-label', (m.v + 1) + ' / ' + m.versions.length), next);
+        bar.appendChild(switcher);
+      }
+      if (m.text) bar.appendChild(copyButton(() => m.text));
+      // Attached files aren't kept after sending, so only text messages can be edited
+      if (m.text && !(m.files && m.files.length)) bar.appendChild(iconButton('edit', 'Edit', () => startEdit(m, row)));
+      return bar;
+    }
+
+    // ---- Editing messages and switching between versions ----
+    // An edited message keeps m.versions = [{ text, after }] and m.v = the version shown.
+    // The messages after it in chat.messages belong to the shown version; the other versions
+    // keep theirs in "after", so switching back shows that whole conversation as it was.
+
+    // Did the reply to this message change the register? (saved, updated, deleted or imported)
+    function changedData(chat, i) {
+      const reply = chat.messages[i + 1];
+      if (!reply || reply.role !== 'assistant') return false;
+      if (reply.blocks.some(b => b.type === 'import' && b.done)) return true;
+      const first = reply.blocks[0];
+      return !!(reply.action && ['insert', 'update', 'delete'].includes(reply.action.action) &&
+        first && first.type === 'text' && first.text.startsWith('Done.'));
+    }
+
+    function startEdit(m, row) {
+      const chat = getChat(activeId);
+      const i = chat ? chat.messages.indexOf(m) : -1;
+      if (busy || i < 0 || row.classList.contains('editing')) return;
+
+      const box = el('div', 'q-edit');
+      const input = el('textarea');
+      input.value = m.text;
+      input.rows = 1;
+      box.appendChild(input);
+      if (changedData(chat, i)) {
+        box.appendChild(el('div', 'q-edit-warning', 'This message already changed your register. Editing it sends a new request and won\'t undo the earlier change.'));
+      }
+      const buttons = el('div', 'q-edit-buttons');
+      const cancel = el('button', 'q-btn', 'Cancel');
+      const save = el('button', 'q-btn primary', 'Save');
+      cancel.type = save.type = 'button';
+      buttons.append(cancel, save);
+      box.appendChild(buttons);
+
+      row.classList.add('editing');
+      row.replaceChildren(box);
+
+      const fit = () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 240) + 'px'; };
+      const close = () => row.replaceWith(renderMessage(m));
+      const submit = () => {
+        const text = input.value.trim();
+        if (!text || busy) return;
+        if (text === m.text) { close(); return; }
+        submitEdit(m, text);
+      };
+      input.addEventListener('input', () => { fit(); save.disabled = !input.value.trim(); });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); }
+        if (e.key === 'Escape') { e.preventDefault(); close(); }
+      });
+      cancel.addEventListener('click', close);
+      save.addEventListener('click', submit);
+
+      fit();
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+      box.scrollIntoView({ block: 'nearest' });
+    }
+
+    async function submitEdit(m, text) {
+      const chat = getChat(activeId);
+      const i = chat ? chat.messages.indexOf(m) : -1;
+      if (busy || i < 0) return;
+      if (!m.versions) { m.versions = [{ text: m.text, after: [] }]; m.v = 0; }
+      // Keep the current version's reply and everything after it, then start the new version
+      m.versions[m.v].after = chat.messages.slice(i + 1);
+      m.versions.push({ text, after: [] });
+      m.v = m.versions.length - 1;
+      m.text = text;
+      chat.messages = chat.messages.slice(0, i + 1);
+      saveChats();
+      renderActiveChat();
+      await respond(chat, text, null, chat.messages.slice(0, i));
+    }
+
+    function switchVersion(m, k) {
+      const chat = getChat(activeId);
+      const i = chat ? chat.messages.indexOf(m) : -1;
+      if (busy || i < 0 || !m.versions || k < 0 || k >= m.versions.length || k === m.v) return;
+      m.versions[m.v].after = chat.messages.slice(i + 1);
+      m.v = k;
+      m.text = m.versions[k].text;
+      chat.messages = chat.messages.slice(0, i + 1).concat(m.versions[k].after);
+      m.versions[k].after = [];   // now live in chat.messages
+      saveChats();
+      renderActiveChat(true);
     }
 
     function appendMessage(m) {
@@ -2173,8 +2364,14 @@ Copy values exactly from the line and leave out any field that isn't on it. Date
       messageInput.value = '';
       autosize();
       clearAttachment();
-      updateSendState();
       appendMessage(userMsg);
+      await respond(chat, text, file, history);
+    }
+
+    // Ask Koda for a reply to the last message in this chat and add it below
+    async function respond(chat, text, file, history) {
+      busy = true;
+      updateSendState();
       const thinking = appendThinking(file ? 'Reading ' + file.name + '…' : 'Thinking…');
       const onStatus = (s) => thinking.setStatus(s);
 
