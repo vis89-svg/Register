@@ -1,0 +1,2222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; connect-src 'self' https://hirgkfhklwtbiajpxhaw.supabase.co; img-src 'self' data: blob:; worker-src 'self' blob:; font-src 'self' data: https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+  <title>Koda - PAN Sorter</title>
+  <link rel="icon" type="image/png" href="koda-logo.png">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+  <style>
+    /* ---- Koda theme (this page only) ---- */
+    :root {
+      --q-page: #f5f4ee;
+      --q-bg: #faf9f5;
+      --q-sidebar: #f2f0e8;
+      --q-card: #ffffff;
+      --q-border: #e5e2d8;
+      --q-border-strong: #d6d2c4;
+      --q-text: #1f1e1d;
+      --q-muted: #6f6c63;
+      --q-faint: #9a978d;
+      --q-hover: #ebe8de;
+      --q-bubble: #efece3;
+      --q-accent: #c96442;
+      --q-accent-hover: #b4553a;
+      --q-serif: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+      --q-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    html, body.qoda { height: 100%; }
+
+    body.qoda {
+      background: var(--q-page);
+      padding: 1rem;
+      min-height: 0;
+      overflow: hidden;
+      color: var(--q-text);
+    }
+
+    body.qoda #authGuard {
+      height: 100%;
+      flex-direction: column;
+    }
+
+    body.qoda .nav { margin-bottom: 1rem; flex-shrink: 0; }
+
+    .q-app {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      background: var(--q-bg);
+      border: 1px solid var(--q-border);
+      border-radius: 16px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Sidebar */
+    .q-sidebar {
+      width: 260px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--q-sidebar);
+      border-right: 1px solid var(--q-border);
+      padding: 14px 10px 10px;
+    }
+
+    .q-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 8px 14px;
+      font-family: var(--q-serif);
+      font-size: 1.35rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .q-logo {
+      width: 30px;
+      height: 30px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .q-new {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 8px;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--q-text);
+      font: 500 0.92rem var(--q-sans);
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .q-new:hover { background: var(--q-hover); }
+
+    .q-new-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--q-accent);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+
+    .q-recents-label {
+      padding: 18px 8px 6px;
+      font: 500 0.75rem var(--q-sans);
+      color: var(--q-faint);
+    }
+
+    .q-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .q-list-empty { padding: 6px 8px; color: var(--q-faint); font-size: 0.85rem; }
+
+    .q-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 7px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      font: 400 0.875rem var(--q-sans);
+      color: #3d3b36;
+    }
+
+    .q-item:hover { background: var(--q-hover); }
+    .q-item.active { background: #e6e2d6; color: var(--q-text); }
+
+    .q-item-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .q-item-delete {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--q-muted);
+      cursor: pointer;
+      opacity: 0;
+    }
+
+    .q-item:hover .q-item-delete, .q-item.active .q-item-delete { opacity: 1; }
+    .q-item-delete:hover { background: #ddd8ca; color: #a3392a; }
+
+    .q-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+      padding: 10px 8px 4px;
+      border-top: 1px solid var(--q-border);
+      font: 400 0.8rem var(--q-sans);
+      color: var(--q-muted);
+      min-width: 0;
+    }
+
+    .q-user-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #3d3b36;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 600;
+      font-size: 0.8rem;
+      flex-shrink: 0;
+    }
+
+    .q-user-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Main column */
+    .q-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .q-topbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 52px;
+      padding: 0 14px;
+      flex-shrink: 0;
+    }
+
+    .q-title {
+      flex: 1;
+      min-width: 0;
+      font: 500 0.92rem var(--q-sans);
+      color: #3d3b36;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .q-icon-btn {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--q-muted);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .q-icon-btn:hover { background: var(--q-hover); color: var(--q-text); }
+    .q-menu-btn { display: none; }
+
+    .q-scroller {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    .q-thread {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 8px 24px 32px;
+    }
+
+    /* Empty state: greeting + composer in the middle, like a fresh chat */
+    .q-welcome { display: none; }
+
+    .q-main.empty .q-scroller { flex: 0 0 auto; }
+    .q-main.empty .q-thread { display: none; }
+    .q-main.empty { justify-content: center; }
+    .q-main.empty .q-topbar { position: absolute; top: 0; left: 0; right: 0; }
+
+    .q-main.empty .q-welcome {
+      display: block;
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 24px 28px;
+      text-align: center;
+    }
+
+    .q-welcome h1 {
+      font-family: var(--q-serif);
+      font-weight: 400;
+      font-size: 2.2rem;
+      letter-spacing: -0.02em;
+      color: #2b2a27;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .q-welcome h1 .q-logo { width: 44px; height: 44px; }
+
+    .q-welcome p {
+      margin-top: 10px;
+      color: var(--q-muted);
+      font: 400 0.95rem var(--q-sans);
+    }
+
+    /* Messages */
+    .q-msg { margin: 0 0 28px; }
+
+    .q-msg.user {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .q-bubble {
+      max-width: 78%;
+      background: var(--q-bubble);
+      color: var(--q-text);
+      padding: 10px 16px;
+      border-radius: 16px;
+      font: 400 0.98rem/1.55 var(--q-sans);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .q-user-files { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: 78%; }
+
+    .q-msg.assistant {
+      font-family: var(--q-serif);
+      font-size: 1.05rem;
+      line-height: 1.7;
+      color: var(--q-text);
+    }
+
+    .q-body { min-width: 0; }
+    .q-body > * + * { margin-top: 14px; }
+
+    .q-text p + p, .q-text p + ul, .q-text ul + p { margin-top: 12px; }
+    .q-text ul { padding-left: 1.4em; }
+    .q-text li + li { margin-top: 4px; }
+    .q-text strong { font-weight: 600; }
+
+    .q-note {
+      font: 400 0.82rem var(--q-sans);
+      color: var(--q-muted);
+    }
+
+    .q-actions {
+      display: flex;
+      gap: 2px;
+      margin-top: 8px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .q-msg.assistant:hover .q-actions { opacity: 1; }
+    .q-actions .q-icon-btn { width: 28px; height: 28px; }
+
+    /* Thinking indicator */
+    .q-thinking {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font: 400 0.9rem var(--q-sans);
+      color: var(--q-muted);
+    }
+
+    .q-dots { display: inline-flex; gap: 4px; }
+
+    .q-dots span {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--q-accent);
+      animation: q-pulse 1.2s infinite ease-in-out;
+    }
+
+    .q-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .q-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+    @keyframes q-pulse {
+      0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Tables */
+    .q-table-wrap {
+      border: 1px solid var(--q-border);
+      border-radius: 12px;
+      overflow: auto;
+      max-height: 420px;
+      background: var(--q-card);
+    }
+
+    .q-table {
+      width: max-content;
+      min-width: 100%;
+      border-collapse: collapse;
+      font: 400 0.85rem/1.4 var(--q-sans);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .q-table th {
+      position: sticky;
+      top: 0;
+      background: #f6f4ee;
+      text-align: left;
+      font-weight: 600;
+      color: #4a4842;
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--q-border);
+      white-space: nowrap;
+    }
+
+    .q-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #f0ede5;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+
+    .q-table td.wrap { white-space: normal; min-width: 140px; max-width: 260px; }
+
+    .q-table tr:last-child td { border-bottom: none; }
+    .q-table .num { text-align: right; white-space: nowrap; }
+    .q-table .mono { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.82rem; letter-spacing: 0.02em; }
+    .q-table .muted { color: var(--q-faint); }
+    .q-table-note { font: 400 0.8rem var(--q-sans); color: var(--q-muted); margin-top: 6px; }
+
+    /* Stat cards */
+    .q-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+
+    .q-stat {
+      border: 1px solid var(--q-border);
+      border-radius: 12px;
+      background: var(--q-card);
+      padding: 12px 14px;
+    }
+
+    .q-stat-label { font: 500 0.78rem var(--q-sans); color: var(--q-muted); }
+    .q-stat-value { font-family: var(--q-serif); font-size: 1.35rem; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+    /* File cards (downloads and attachments) */
+    .q-file {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      max-width: 420px;
+      border: 1px solid var(--q-border);
+      border-radius: 12px;
+      background: var(--q-card);
+      padding: 10px 12px;
+      font-family: var(--q-sans);
+    }
+
+    .q-file-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font: 700 0.62rem var(--q-sans);
+      letter-spacing: 0.03em;
+      flex-shrink: 0;
+      background: #77736a;
+    }
+
+    .q-file-icon.xlsx, .q-file-icon.xls { background: #1d6f42; }
+    .q-file-icon.csv { background: #3f7d58; }
+    .q-file-icon.pdf { background: #c4372b; }
+    .q-file-icon.docx { background: #2b579a; }
+
+    .q-file-info { flex: 1; min-width: 0; }
+    .q-file-name { font-size: 0.9rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .q-file-sub { font-size: 0.78rem; color: var(--q-muted); margin-top: 1px; }
+
+    .q-file.small { padding: 6px 10px 6px 6px; gap: 10px; max-width: 280px; }
+    .q-file.small .q-file-icon { width: 34px; height: 34px; }
+
+    .q-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 9px;
+      border: 1px solid var(--q-border-strong);
+      background: var(--q-card);
+      color: var(--q-text);
+      font: 500 0.85rem var(--q-sans);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .q-btn:hover { background: #f6f4ee; }
+    .q-btn:disabled { opacity: 0.55; cursor: wait; }
+    .q-btn.primary { background: var(--q-text); border-color: var(--q-text); color: #fff; }
+    .q-btn.primary:hover { background: #3d3b36; }
+
+    /* Import preview */
+    .q-chips { display: flex; flex-wrap: wrap; gap: 6px; font-family: var(--q-sans); }
+
+    .q-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font: 500 0.75rem var(--q-sans);
+      white-space: nowrap;
+    }
+
+    .q-pill.add { background: #e5f1e7; color: #2b6a3a; }
+    .q-pill.fill { background: #e4edf7; color: #2a5a8a; }
+    .q-pill.skip { background: #eeebe3; color: #6b6a63; }
+    .q-pill.error { background: #f8e4df; color: #a3392a; }
+    .q-pill.done { background: #e5f1e7; color: #2b6a3a; }
+
+    .q-reason { display: block; font-size: 0.76rem; color: var(--q-muted); margin-top: 3px; white-space: normal; min-width: 180px; max-width: 260px; }
+
+    .q-import-footer {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      font: 400 0.85rem var(--q-sans);
+      color: var(--q-muted);
+    }
+
+    /* Composer */
+    .q-composer-wrap {
+      flex-shrink: 0;
+      max-width: 820px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 24px 14px;
+    }
+
+    .q-composer {
+      background: var(--q-card);
+      border: 1px solid var(--q-border-strong);
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(31, 30, 29, 0.05);
+      padding: 12px 12px 10px 16px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .q-composer:focus-within { border-color: #bfb9a8; box-shadow: 0 4px 24px rgba(31, 30, 29, 0.08); }
+
+    .q-attachments { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .q-attachments:empty { display: none; }
+
+    .q-attachments .q-file { position: relative; }
+
+    .q-remove {
+      position: absolute;
+      top: -7px;
+      right: -7px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 1px solid var(--q-border-strong);
+      background: var(--q-card);
+      color: var(--q-muted);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .q-remove:hover { color: var(--q-text); }
+
+    .q-composer textarea {
+      display: block;
+      width: 100%;
+      border: none;
+      outline: none;
+      resize: none;
+      background: transparent;
+      font: 400 1rem/1.5 var(--q-sans);
+      color: var(--q-text);
+      max-height: 220px;
+      min-height: 26px;
+      padding: 2px 0;
+    }
+
+    .q-composer textarea::placeholder { color: var(--q-faint); }
+
+    .q-composer-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .q-composer-row .q-icon-btn { border: 1px solid var(--q-border); width: 32px; height: 32px; }
+    .q-spacer { flex: 1; }
+
+    .q-send {
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 9px;
+      background: var(--q-accent);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+
+    .q-send:hover { background: var(--q-accent-hover); }
+    .q-send:disabled { opacity: 0.45; cursor: default; }
+
+    .q-suggestions {
+      display: none;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .q-main.empty .q-suggestions { display: flex; }
+
+    .q-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border: 1px solid var(--q-border);
+      border-radius: 10px;
+      background: var(--q-bg);
+      color: #4a4842;
+      font: 400 0.85rem var(--q-sans);
+      cursor: pointer;
+    }
+
+    .q-chip:hover { background: var(--q-card); border-color: var(--q-border-strong); color: var(--q-text); }
+
+    .q-disclaimer {
+      text-align: center;
+      font: 400 0.75rem var(--q-sans);
+      color: var(--q-faint);
+      margin-top: 8px;
+    }
+
+    .q-main.empty .q-disclaimer { display: none; }
+
+    /* Drag and drop */
+    .q-drop {
+      display: none;
+      position: absolute;
+      inset: 10px;
+      border: 2px dashed var(--q-accent);
+      border-radius: 14px;
+      background: rgba(250, 249, 245, 0.92);
+      z-index: 5;
+      place-items: center;
+      font: 500 1rem var(--q-sans);
+      color: var(--q-accent);
+      pointer-events: none;
+    }
+
+    .q-main.dragging .q-drop { display: grid; }
+
+    .q-backdrop { display: none; }
+
+    /* Phones and small tablets: sidebar becomes a drawer */
+    @media (max-width: 820px) {
+      body.qoda { padding: 0.75rem; }
+      .q-app { border-radius: 12px; }
+
+      .q-sidebar {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 20;
+        transform: translateX(-105%);
+        transition: transform 0.2s ease;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08);
+      }
+
+      .q-app.drawer-open .q-sidebar { transform: none; }
+
+      .q-app.drawer-open .q-backdrop {
+        display: block;
+        position: absolute;
+        inset: 0;
+        z-index: 15;
+        background: rgba(31, 30, 29, 0.25);
+      }
+
+      .q-menu-btn { display: grid; }
+      .q-thread { padding: 4px 14px 24px; }
+      .q-composer-wrap { padding: 0 12px 10px; }
+      .q-welcome h1 { font-size: 1.6rem; }
+      .q-bubble, .q-user-files { max-width: 90%; }
+      .q-msg.assistant { font-size: 1rem; }
+      .q-actions { opacity: 1; }
+      .q-item-delete { opacity: 1; }
+    }
+  </style>
+</head>
+
+<body class="qoda">
+
+  <div id="authGuard" style="display: none;">
+    <nav class="nav">
+      <div class="nav-links">
+        <a href="quick-entry.html">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          Quick Entry
+        </a>
+        <a href="index.html">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          Full Entry
+        </a>
+        <a href="display.html">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3v18h18"/>
+            <path d="M7 16v-3"/>
+            <path d="M12 16v-7"/>
+            <path d="M17 16V8"/>
+          </svg>
+          Display
+        </a>
+        <a href="chat.html" class="active">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          Koda
+        </a>
+      </div>
+      <button class="nav-logout" id="logoutBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Logout
+      </button>
+    </nav>
+
+    <div class="q-app" id="app">
+      <aside class="q-sidebar">
+        <div class="q-brand"><img class="q-logo" src="koda-logo.png" alt="">Koda</div>
+        <button type="button" id="newChatBtn" class="q-new">
+          <span class="q-new-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </span>
+          New chat
+        </button>
+        <div class="q-recents-label">Recents</div>
+        <div id="chatList" class="q-list"></div>
+        <div class="q-user">
+          <span class="q-user-avatar" id="userAvatar"></span>
+          <span class="q-user-email" id="userEmail"></span>
+        </div>
+      </aside>
+      <div class="q-backdrop" id="backdrop"></div>
+
+      <main class="q-main empty" id="main">
+        <header class="q-topbar">
+          <button type="button" class="q-icon-btn q-menu-btn" id="menuBtn" title="Chats">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+          </button>
+          <div class="q-title" id="chatTitle"></div>
+        </header>
+
+        <div class="q-scroller" id="scroller">
+          <div class="q-thread" id="chatMessages"></div>
+        </div>
+
+        <div class="q-welcome">
+          <h1><img class="q-logo" src="koda-logo.png" alt=""><span id="greeting">Hello</span></h1>
+          <p>Ask about your PAN register, add or change entries, or attach an Excel, CSV, PDF or Word file to import it.</p>
+        </div>
+
+        <div class="q-composer-wrap">
+          <form id="messageForm" class="q-composer">
+            <div id="attachments" class="q-attachments"></div>
+            <textarea id="messageInput" rows="1" placeholder="How can I help you today?" autocomplete="off"></textarea>
+            <div class="q-composer-row">
+              <button type="button" class="q-icon-btn" id="attachBtn" title="Attach a file (Excel, CSV, PDF, Word)">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              </button>
+              <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.pdf,.docx,.txt" hidden>
+              <span class="q-spacer"></span>
+              <button type="submit" class="q-send" id="sendBtn" title="Send" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+              </button>
+            </div>
+          </form>
+          <div class="q-suggestions" id="suggestions">
+            <button type="button" class="q-chip" data-prompt="Show me all entries">Show all entries</button>
+            <button type="button" class="q-chip" data-prompt="What is the total amount and tax?">Totals</button>
+            <button type="button" class="q-chip" data-prompt="Give me all entries as an Excel file">Export to Excel</button>
+            <button type="button" class="q-chip" data-attach="1">Import a file</button>
+          </div>
+          <p class="q-disclaimer">Koda can make mistakes. Check important entries before relying on them.</p>
+        </div>
+
+        <div class="q-drop">Drop the file to attach it</div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase, supabaseUrl, supabaseAnonKey } from './supabase-config.js';
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      window.location.href = 'login.html?redirect=chat.html';
+    } else {
+      document.getElementById('authGuard').style.display = 'flex';
+    }
+
+    // AI requests go through our Supabase Edge Function, which keeps the Groq key secret
+    const AI_PROXY_URL = supabaseUrl + '/functions/v1/groq-proxy';
+    // Free Groq plan: ~8000 tokens/minute per model. If the first model is busy, the next one is tried.
+    const GROQ_MODELS = ['openai/gpt-oss-20b', 'qwen/qwen3.8-27b'];
+    const AI_TIMEOUT_MS = 20000;
+    const MAX_ROWS = 50;
+    const MAX_FILE_MB = 10;
+    const MAX_IMPORT_ROWS = 2000;
+
+    const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    const PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    const PDFJS_WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const MAMMOTH_URL = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+    const JSPDF_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    const AUTOTABLE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js';
+
+    const $ = (id) => document.getElementById(id);
+    const app = $('app');
+    const main = $('main');
+    const scroller = $('scroller');
+    const chatMessages = $('chatMessages');
+    const messageForm = $('messageForm');
+    const messageInput = $('messageInput');
+    const sendBtn = $('sendBtn');
+    const chatList = $('chatList');
+    const fileInput = $('fileInput');
+    const attachments = $('attachments');
+
+    // ---- Small helpers ----
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const money = (v) => '₹' + Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const isNum = (v) => typeof v === 'number' && !isNaN(v);
+    const plural = (n, word = 'entr') => n + ' ' + word + (word === 'entr' ? (n === 1 ? 'y' : 'ies') : (n === 1 ? '' : 's'));
+    const normName = (n) => String(n || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const fileExt = (name) => (String(name).split('.').pop() || '').toLowerCase();
+    const PAN_RE = /\b([A-Z]{5}[0-9]{4}[A-Z])\b/;
+
+    function el(tag, cls, text) {
+      const e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (text != null) e.textContent = text;
+      return e;
+    }
+
+    function icon(name, size = 16) {
+      const paths = {
+        copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+        check: '<polyline points="20 6 9 17 4 12"/>',
+        trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/>',
+        download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+        x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'
+      };
+      const span = el('span');
+      span.style.display = 'inline-flex';
+      span.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths[name]}</svg>`;
+      return span;
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+      return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+    }
+
+    const scriptCache = {};
+    function loadScript(src) {
+      return scriptCache[src] ||= new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.crossOrigin = 'anonymous';
+        s.onload = resolve;
+        s.onerror = () => { delete scriptCache[src]; reject(new Error('Could not load ' + src.split('/').pop())); };
+        document.head.appendChild(s);
+      });
+    }
+
+    // ---- Saved chats (kept in this browser, separately for each user) ----
+    const userId = session?.user?.id || 'anon';
+    const CHATS_KEY = 'pansorter_chats_' + userId;
+    const ACTIVE_KEY = 'pansorter_active_chat_' + userId;
+
+    // Older chats stored plain text; convert them to the block format
+    function normalizeMessage(m) {
+      if (m.role === 'user') return m.text !== undefined ? m : { role: 'user', text: m.content || '', files: [] };
+      if (m.blocks) return m;
+      const blocks = [{ type: 'text', text: m.content || '' }];
+      if (m.download) {
+        blocks.push({ type: 'file', request: m.download, format: m.download.format, fileName: 'PAN_Entries' + (m.download.format === 'pdf' ? '.pdf' : '.xlsx') });
+      }
+      return m.action ? { role: 'assistant', blocks, action: m.action } : { role: 'assistant', blocks };
+    }
+
+    function loadChats() {
+      try {
+        const list = JSON.parse(localStorage.getItem(CHATS_KEY) || '[]');
+        if (!Array.isArray(list)) return [];
+        list.forEach(c => { c.messages = (c.messages || []).map(normalizeMessage); });
+        return list;
+      } catch (e) {
+        return [];
+      }
+    }
+
+    let chats = loadChats();      // [{ id, title, updatedAt, messages }], newest first
+    let activeId = null;          // null = a new chat that has no messages yet
+    let busy = false;
+    let pendingFile = null;
+
+    function saveChats() {
+      // If storage is full, drop the oldest chats until it fits
+      while (true) {
+        try {
+          localStorage.setItem(CHATS_KEY, JSON.stringify(chats));
+          if (activeId) localStorage.setItem(ACTIVE_KEY, activeId);
+          else localStorage.removeItem(ACTIVE_KEY);
+          return;
+        } catch (e) {
+          if (chats.length <= 1) return;
+          chats.pop();
+        }
+      }
+    }
+
+    const getChat = (id) => chats.find(c => c.id === id) || null;
+
+    function newId() {
+      return (crypto.randomUUID && crypto.randomUUID()) || (Date.now().toString(36) + Math.random().toString(36).slice(2));
+    }
+
+    // Plain-text version of a message, used for AI context and copying
+    function blocksToText(blocks) {
+      return blocks.map(b => {
+        if (b.type === 'text' || b.type === 'note') return b.text;
+        if (b.type === 'stats') return b.items.map(i => i.label + ': ' + i.value).join('\n');
+        if (b.type === 'table') return b.columns.map(c => c.label).join(' | ') + '\n' + b.rows.map(r => r.map(c => typeof c === 'object' ? c.text : c).join(' | ')).join('\n');
+        if (b.type === 'file') return 'Created file ' + b.fileName;
+        if (b.type === 'import') return 'Import preview of ' + b.fileName + ': ' + importCounts(b).map(c => c.n + ' ' + c.label).join(', ') + (b.done ? ' (imported)' : '');
+        return '';
+      }).filter(Boolean).join('\n\n');
+    }
+
+    function messageText(m) {
+      if (m.role === 'user') return (m.text || '') + (m.files?.length ? ' [attached: ' + m.files.map(f => f.name).join(', ') + ']' : '');
+      return blocksToText(m.blocks);
+    }
+
+    function renderChatList() {
+      chatList.textContent = '';
+      if (!chats.length) {
+        chatList.appendChild(el('div', 'q-list-empty', 'No chats yet'));
+        return;
+      }
+      chats.forEach(chat => {
+        const item = el('div', 'q-item' + (chat.id === activeId ? ' active' : ''));
+        item.title = chat.title;
+        const del = el('button', 'q-item-delete');
+        del.type = 'button';
+        del.title = 'Delete chat';
+        del.appendChild(icon('trash', 14));
+        del.addEventListener('click', e => { e.stopPropagation(); deleteChat(chat.id); });
+        item.append(el('span', 'q-item-title', chat.title), del);
+        item.addEventListener('click', () => { openChat(chat.id); app.classList.remove('drawer-open'); });
+        chatList.appendChild(item);
+      });
+    }
+
+    function setEmptyState() {
+      const chat = getChat(activeId);
+      main.classList.toggle('empty', !chat || !chat.messages.length);
+      $('chatTitle').textContent = chat ? chat.title : '';
+    }
+
+    function openChat(id) {
+      const chat = id ? getChat(id) : null;
+      activeId = chat ? chat.id : null;
+      chatMessages.textContent = '';
+      if (chat) chat.messages.forEach(m => chatMessages.appendChild(renderMessage(m)));
+      setEmptyState();
+      saveChats();
+      renderChatList();
+      scrollToBottom();
+      messageInput.focus();
+    }
+
+    function deleteChat(id) {
+      const chat = getChat(id);
+      if (!chat || !confirm('Delete chat "' + chat.title + '"?')) return;
+      chats = chats.filter(c => c.id !== id);
+      if (activeId === id) openChat(null);
+      else { saveChats(); renderChatList(); }
+    }
+
+    function scrollToBottom() {
+      scroller.scrollTop = scroller.scrollHeight;
+    }
+
+    // ---- Rendering messages ----
+    function renderInline(parent, text) {
+      String(text).split(/(\*\*[^*]+\*\*)/g).forEach(part => {
+        if (/^\*\*[^*]+\*\*$/.test(part)) parent.appendChild(el('strong', null, part.slice(2, -2)));
+        else if (part) parent.appendChild(document.createTextNode(part));
+      });
+    }
+
+    // Paragraphs, bullet lists and **bold**; everything goes in as text, never HTML
+    function renderText(text) {
+      const wrap = el('div', 'q-text');
+      String(text).trim().split(/\n{2,}/).forEach(para => {
+        const lines = para.split('\n');
+        if (lines.every(l => /^\s*[•\-*]\s+/.test(l))) {
+          const ul = el('ul');
+          lines.forEach(l => { const li = el('li'); renderInline(li, l.replace(/^\s*[•\-*]\s+/, '')); ul.appendChild(li); });
+          wrap.appendChild(ul);
+        } else {
+          const p = el('p');
+          lines.forEach((l, i) => { if (i) p.appendChild(el('br')); renderInline(p, l); });
+          wrap.appendChild(p);
+        }
+      });
+      return wrap;
+    }
+
+    function renderTable(b) {
+      const frag = el('div');
+      const wrap = el('div', 'q-table-wrap');
+      const table = el('table', 'q-table');
+      const head = el('tr');
+      b.columns.forEach(c => head.appendChild(el('th', c.num ? 'num' : '', c.label)));
+      const thead = el('thead');
+      thead.appendChild(head);
+      const tbody = el('tbody');
+      b.rows.forEach(r => {
+        const tr = el('tr');
+        r.forEach((cell, i) => {
+          const col = b.columns[i];
+          const td = el('td', [col.num && 'num', col.mono && 'mono', col.wrap && 'wrap'].filter(Boolean).join(' '));
+          if (cell && typeof cell === 'object') {
+            td.appendChild(el('span', 'q-pill ' + cell.pill, cell.text));
+            if (cell.reason) td.appendChild(el('span', 'q-reason', cell.reason));
+          } else if (cell === '' || cell == null) {
+            td.className += ' muted';
+            td.textContent = '—';
+          } else {
+            td.textContent = cell;
+          }
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      table.append(thead, tbody);
+      wrap.appendChild(table);
+      frag.appendChild(wrap);
+      if (b.note) frag.appendChild(el('div', 'q-table-note', b.note));
+      return frag;
+    }
+
+    function renderStats(b) {
+      const grid = el('div', 'q-stats');
+      b.items.forEach(i => {
+        const card = el('div', 'q-stat');
+        card.append(el('div', 'q-stat-label', i.label), el('div', 'q-stat-value', i.value));
+        grid.appendChild(card);
+      });
+      return grid;
+    }
+
+    function fileCard(name, sub, small) {
+      const card = el('div', 'q-file' + (small ? ' small' : ''));
+      const ext = fileExt(name);
+      card.append(el('div', 'q-file-icon ' + ext, ext.toUpperCase().slice(0, 4)));
+      const info = el('div', 'q-file-info');
+      info.append(el('div', 'q-file-name', name), el('div', 'q-file-sub', sub));
+      card.appendChild(info);
+      return card;
+    }
+
+    function renderFile(b) {
+      const sub = (b.format === 'pdf' ? 'PDF report' : 'Excel spreadsheet') + (b.count != null ? ' · ' + plural(b.count) : '');
+      const card = fileCard(b.fileName, sub);
+      const btn = el('button', 'q-btn');
+      btn.type = 'button';
+      btn.title = 'Download again with the latest data';
+      btn.append(icon('download', 14), document.createTextNode('Download'));
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+          const result = await exportEntries(b.request);
+          if (typeof result === 'string') alert(result);
+        } catch (err) {
+          alert('Download failed: ' + err.message);
+        }
+        btn.disabled = false;
+      });
+      card.appendChild(btn);
+      return card;
+    }
+
+    const STATUS_LABEL = { add: 'New', fill: 'Completes Quick Entry', skip: 'Already in register', error: 'Problem' };
+
+    function importCounts(b) {
+      const count = (s) => b.rows.filter(r => r.status === s).length;
+      return [
+        { pill: 'add', n: count('add'), label: 'new' },
+        { pill: 'fill', n: count('fill'), label: 'complete a Quick Entry' },
+        { pill: 'skip', n: count('skip'), label: 'already in the register' },
+        { pill: 'error', n: count('error'), label: 'with problems' }
+      ].filter(c => c.n);
+    }
+
+    function renderImport(b, msg) {
+      const box = el('div');
+      box.style.display = 'grid';
+      box.style.gridTemplateColumns = 'minmax(0, 1fr)';   // let the table scroll instead of widening the chat
+      box.style.gap = '12px';
+
+      const chips = el('div', 'q-chips');
+      importCounts(b).forEach(c => chips.appendChild(el('span', 'q-pill ' + c.pill, c.n + ' ' + c.label)));
+      box.appendChild(chips);
+
+      const shown = b.rows.slice(0, 200);
+      box.appendChild(renderTable({
+        columns: [{ label: '#' }, { label: 'Status' }, { label: 'PAN', mono: true }, { label: 'Name', wrap: true }, { label: 'Date' }, { label: 'Amount', num: true }, { label: 'Tax', num: true }, { label: 'Ded. %', num: true }],
+        rows: shown.map((r, i) => [
+          String(i + 1),
+          { pill: r.status, text: STATUS_LABEL[r.status], reason: r.status === 'add' ? '' : r.reason },
+          r.pan, r.name, r.date || '',
+          isNum(r.amount) ? money(r.amount) : (r.amount ?? ''),
+          isNum(r.tax_amount) ? money(r.tax_amount) : (r.tax_amount ?? ''),
+          r.deduction_percentage ?? ''
+        ]),
+        note: b.rows.length > shown.length ? `Showing the first ${shown.length} of ${b.rows.length} rows.` : ''
+      }));
+
+      const footer = el('div', 'q-import-footer');
+      const ready = b.rows.filter(r => r.status === 'add' || r.status === 'fill').length;
+      if (b.done) {
+        const parts = [];
+        if (b.done.added) parts.push('added ' + plural(b.done.added));
+        if (b.done.filled) parts.push('completed ' + b.done.filled + ' Quick ' + (b.done.filled === 1 ? 'Entry' : 'Entries'));
+        if (b.done.failed) parts.push(b.done.failed + ' could not be saved');
+        const done = el('span', 'q-pill done');
+        done.append(icon('check', 12), document.createTextNode(parts.length ? capitalize(parts.join(', ')) : 'Nothing was added'));
+        footer.appendChild(done);
+      } else if (ready) {
+        const btn = el('button', 'q-btn primary', 'Add ' + plural(ready));
+        btn.type = 'button';
+        btn.addEventListener('click', () => commitImport(b, msg, btn));
+        footer.append(btn, el('span', null, 'Rows that are already in the register or have problems will be skipped.'));
+      } else {
+        footer.appendChild(el('span', null, 'There is nothing new to add from this file.'));
+      }
+      box.appendChild(footer);
+      return box;
+    }
+
+    const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+    function renderBlock(b, msg) {
+      if (b.type === 'text') return renderText(b.text);
+      if (b.type === 'note') return el('div', 'q-note', b.text);
+      if (b.type === 'table') return renderTable(b);
+      if (b.type === 'stats') return renderStats(b);
+      if (b.type === 'file') return renderFile(b);
+      if (b.type === 'import') return renderImport(b, msg);
+      return el('div');
+    }
+
+    function renderMessage(m) {
+      if (m.role === 'user') {
+        const row = el('div', 'q-msg user');
+        if (m.files?.length) {
+          const files = el('div', 'q-user-files');
+          m.files.forEach(f => files.appendChild(fileCard(f.name, fileExt(f.name).toUpperCase() + ' · ' + formatSize(f.size), true)));
+          row.appendChild(files);
+        }
+        if (m.text) row.appendChild(el('div', 'q-bubble', m.text));
+        return row;
+      }
+
+      const row = el('div', 'q-msg assistant');
+      const body = el('div', 'q-body');
+      m.blocks.forEach(b => body.appendChild(renderBlock(b, m)));
+      row.appendChild(body);
+
+      const actions = el('div', 'q-actions');
+      const copy = el('button', 'q-icon-btn');
+      copy.type = 'button';
+      copy.title = 'Copy';
+      copy.appendChild(icon('copy', 15));
+      copy.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(blocksToText(m.blocks));
+          copy.replaceChildren(icon('check', 15));
+          setTimeout(() => copy.replaceChildren(icon('copy', 15)), 1500);
+        } catch (e) {}
+      });
+      actions.appendChild(copy);
+      row.appendChild(actions);
+      return row;
+    }
+
+    function appendMessage(m) {
+      const node = renderMessage(m);
+      chatMessages.appendChild(node);
+      scrollToBottom();
+      return node;
+    }
+
+    function appendThinking(text) {
+      const row = el('div', 'q-msg assistant');
+      const t = el('div', 'q-thinking');
+      const dots = el('span', 'q-dots');
+      dots.append(el('span'), el('span'), el('span'));
+      const label = el('span', null, text);
+      t.append(dots, label);
+      row.appendChild(t);
+      chatMessages.appendChild(row);
+      scrollToBottom();
+      row.setStatus = (s) => { label.textContent = s; };
+      return row;
+    }
+
+    // Shorthand for building replies
+    const T = (text) => ({ type: 'text', text });
+    const say = (text) => ({ blocks: [T(text)] });
+
+    function entriesTable(rows, note) {
+      return {
+        type: 'table',
+        columns: [{ label: 'PAN', mono: true }, { label: 'Name', wrap: true }, { label: 'Date' }, { label: 'Amount', num: true }, { label: 'Tax', num: true }, { label: 'Deduction', num: true }],
+        rows: rows.map(e => [e.pan_number, e.name || '', e.date || '', money(e.amount), money(e.tax_amount), (e.deduction_percentage ?? 0) + '%']),
+        note
+      };
+    }
+
+    // ---- AI ----
+    function systemPrompt() {
+      return `Convert the user's request about a PAN register into ONE JSON object. Today is ${new Date().toISOString().slice(0, 10)}.
+Table "entries": pan_number (AAAAA9999A), name, date (YYYY-MM-DD), amount, tax_amount, deduction_percentage.
+Keys (action and reply are ALWAYS required; leave out other keys that don't apply):
+action: insert|search|summary|update|delete|export|chat
+pan (full PAN, uppercase), pan_prefix ("PAN starting with"), name (insert: the name; search: name contains)
+date (insert: entry date; update: NEW date), entry_date (update/delete: date of the existing entry meant)
+all_entries (true only if user clearly says all entries of the PAN)
+amount, tax_amount, deduction_percentage (insert values, or new values for update)
+date_from, date_to, min_amount, max_amount, min_deduction, max_deduction (filters)
+format: excel|pdf (export only, default excel)
+reply: short, friendly plain text for the user (for greetings, greet back and offer help)
+Rules: Never invent a PAN, name, date or amount; use only what the user said in this chat. insert needs pan+name; update/delete need pan.
+summary = totals/counts. export = user wants a file/download/Excel/xlsx/spreadsheet/PDF (the app CAN make files), same filters as search; "that list"/"these" = reuse the previous request's filters.
+Files are imported with the paperclip button next to the message box; if the user asks to upload or import a file, use chat and tell them that.
+chat = greetings, help, unclear or invalid requests; reply must say exactly what is missing or wrong.
+Never claim success in reply; the app reports results.`;
+    }
+
+    async function callGroq(model, messages, maxTokens) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+      try {
+        const { data: { session: current } } = await supabase.auth.getSession();
+        const res = await fetch(AI_PROXY_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + current?.access_token, 'apikey': supabaseAnonKey },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model,
+            reasoning_effort: 'low',
+            response_format: { type: 'json_object' },
+            temperature: 0,
+            max_tokens: maxTokens,
+            messages
+          })
+        });
+        const data = await res.json();
+        if (res.ok) return { json: JSON.parse(data.choices[0].message.content) };
+        return { status: res.status, error: new Error(data?.error?.message || ('HTTP ' + res.status)) };
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    async function askGroqJSON(messages, maxTokens, onStatus = () => {}) {
+      let lastError;
+      for (const model of GROQ_MODELS) {
+        let result = await callGroq(model, messages, maxTokens);
+        // Rate-limited for only a few seconds: wait once and retry the same model
+        const m = result.status === 429 && result.error.message.match(/try again in ([\d.]+)(ms|s)/);
+        const wait = m ? parseFloat(m[1]) / (m[2] === 'ms' ? 1000 : 1) : Infinity;
+        if (wait <= 8) {
+          onStatus(`The AI is busy, retrying in ${Math.ceil(wait)}s…`);
+          await sleep(wait * 1000 + 300);
+          result = await callGroq(model, messages, maxTokens);
+        }
+        if (result.json) return result.json;
+        lastError = result.error;
+        // Only move on to the next model when this one is rate-limited or down
+        if (result.status !== 429 && result.status < 500) break;
+      }
+      throw lastError;
+    }
+
+    function askAI(text, history, onStatus) {
+      const messages = [
+        { role: 'system', content: systemPrompt() },
+        ...history.slice(-6).map(m => ({
+          role: m.role,
+          // Include the earlier action so follow-ups ("that list as PDF") can reuse its filters
+          content: m.action ? 'Action: ' + JSON.stringify(m.action) + '\nResult: ' + messageText(m).slice(0, 300) : messageText(m).slice(0, 600)
+        })),
+        { role: 'user', content: text }
+      ];
+      return askGroqJSON(messages, 250, onStatus);
+    }
+
+    // ---- Local fallback parser (used only if the AI is unreachable) ----
+    function parseLocally(text) {
+      const panMatch = text.match(/\b([a-z]{5}\d{4}[a-z])\b/i);
+      const pan = panMatch ? panMatch[1].toUpperCase() : null;
+      const num = (re) => { const m = text.match(re); return m ? parseFloat(m[1].replace(/,/g, '')) : null; };
+
+      const entry = text.match(/enter\s+pan\s+([a-z0-9]+)\s+for\s+(.+?)(?:\s+on\s+(\d{4}-\d{2}-\d{2}))?(?:\s+with\s+amount\s+(-?[\d,.]+))?(?:\s+and\s+tax\s+(-?[\d,.]+))?(?:\s+and\s+deduction\s+(-?[\d.]+)%?)?\s*$/i);
+      if (entry) {
+        return {
+          action: 'insert', pan: entry[1].toUpperCase(), name: entry[2].trim(), date: entry[3] || null,
+          amount: entry[4] ? parseFloat(entry[4].replace(/,/g, '')) : null,
+          tax_amount: entry[5] ? parseFloat(entry[5].replace(/,/g, '')) : null,
+          deduction_percentage: entry[6] ? parseFloat(entry[6]) : null
+        };
+      }
+      if (/\b(excel|xlsx|spreadsheet|pdf|export|download)\b/i.test(text)) {
+        return { action: 'export', pan, format: /\bpdf\b/i.test(text) ? 'pdf' : 'excel' };
+      }
+      if (/^\s*(delete|remove)\b/i.test(text)) return { action: 'delete', pan };
+      if (/^\s*update\b/i.test(text)) {
+        return {
+          action: 'update', pan,
+          amount: num(/amount\s+to\s+([\d,.]+)/i),
+          tax_amount: num(/tax\s+to\s+([\d,.]+)/i),
+          deduction_percentage: num(/deduction\s+to\s+([\d.]+)/i)
+        };
+      }
+      if (/\b(total|sum|count|how many)\b/i.test(text)) return { action: 'summary', pan };
+      if (/\b(show|find|get|list|display|search)\b/i.test(text)) {
+        const prefix = text.match(/starting\s+with\s+([a-z0-9]+)/i);
+        return {
+          action: 'search', pan,
+          pan_prefix: prefix ? prefix[1].toUpperCase() : null,
+          min_deduction: num(/deduction[^\d]*above\s+([\d.]+)/i)
+        };
+      }
+      return { action: 'chat', reply: 'Sorry, I couldn\'t understand that. Try something like "Show me all entries" or "Enter PAN ABCDE1234F for John Doe on 2024-01-15 with amount 5000".' };
+    }
+
+    // ---- Database queries ----
+    function applyFilters(query, a) {
+      if (a.pan) query = query.eq('pan_number', String(a.pan).toUpperCase());
+      else if (a.pan_prefix) query = query.ilike('pan_number', String(a.pan_prefix).toUpperCase() + '%');
+      if (a.name) query = query.ilike('name', '%' + a.name + '%');
+      if (a.date_from) query = query.gte('date', a.date_from);
+      if (a.date_to) query = query.lte('date', a.date_to);
+      if (isNum(a.min_amount)) query = query.gte('amount', a.min_amount);
+      if (isNum(a.max_amount)) query = query.lte('amount', a.max_amount);
+      if (isNum(a.min_deduction)) query = query.gt('deduction_percentage', a.min_deduction);
+      if (isNum(a.max_deduction)) query = query.lt('deduction_percentage', a.max_deduction);
+      return query;
+    }
+
+    // Supabase returns at most 1000 rows per request, so page through everything
+    async function fetchAllEntries(a) {
+      const all = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await applyFilters(supabase.from('entries').select('*'), a)
+          .order('date', { ascending: true, nullsFirst: false })
+          .order('created_at', { ascending: true })
+          .range(from, from + 999);
+        if (error) throw new Error(error.message);
+        all.push(...data);
+        if (data.length < 1000) return all;
+      }
+    }
+
+    function describeFilters(a) {
+      const parts = [];
+      if (a.pan) parts.push('PAN ' + String(a.pan).toUpperCase());
+      else if (a.pan_prefix) parts.push('PAN starting ' + String(a.pan_prefix).toUpperCase());
+      if (a.name) parts.push('name contains "' + a.name + '"');
+      if (a.date_from || a.date_to) parts.push('date ' + (a.date_from || '...') + ' to ' + (a.date_to || '...'));
+      if (isNum(a.min_amount)) parts.push('amount >= ' + a.min_amount);
+      if (isNum(a.max_amount)) parts.push('amount <= ' + a.max_amount);
+      if (isNum(a.min_deduction)) parts.push('deduction > ' + a.min_deduction + '%');
+      if (isNum(a.max_deduction)) parts.push('deduction < ' + a.max_deduction + '%');
+      return parts.length ? parts.join(', ') : 'all entries';
+    }
+
+    // ---- Excel / PDF export ----
+    const EXPORT_HEAD = ['Sl.No', 'Organization / Name', 'PAN Number', 'Amount (₹)', 'Tax (₹)', 'Deduction (%)', 'Date of Entry'];
+
+    async function exportEntries(a) {
+      const format = a.format === 'pdf' ? 'pdf' : 'excel';
+      const rows = await fetchAllEntries(a);
+      if (!rows.length) return 'No entries match (' + describeFilters(a) + '), so there is nothing to export.';
+
+      const totalAmount = rows.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+      const totalTax = rows.reduce((s, e) => s + (Number(e.tax_amount) || 0), 0);
+      const fileName = 'PAN_Entries_' + new Date().toISOString().slice(0, 10) + (format === 'pdf' ? '.pdf' : '.xlsx');
+
+      if (format === 'excel') {
+        await loadScript(XLSX_URL);
+        const sheetRows = [EXPORT_HEAD];
+        rows.forEach((e, i) => sheetRows.push([
+          i + 1, e.name || '', e.pan_number, Number(e.amount) || 0, Number(e.tax_amount) || 0, Number(e.deduction_percentage) || 0, e.date || ''
+        ]));
+        sheetRows.push([], ['', 'TOTAL', '', totalAmount, totalTax, '', '']);
+        const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+        ws['!cols'] = [{ wch: 7 }, { wch: 32 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 13 }, { wch: 13 }];
+        for (let r = 2; r <= sheetRows.length; r++) {
+          ['D', 'E'].forEach(col => { const c = ws[col + r]; if (c && c.t === 'n') c.z = '#,##0.00'; });
+        }
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'PAN Entries');
+        XLSX.writeFile(wb, fileName);
+      } else {
+        await loadScript(JSPDF_URL);
+        await loadScript(AUTOTABLE_URL);
+        // The built-in PDF font has no ₹ glyph, so use "Rs." like the Display page
+        const rs = (v) => 'Rs. ' + Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        doc.setFontSize(16);
+        doc.text('PAN Entries Report', 14, 20);
+        doc.setFontSize(10);
+        doc.text('Generated: ' + new Date().toLocaleString('en-IN') + '   |   Filter: ' + describeFilters(a), 14, 27);
+        doc.autoTable({
+          head: [EXPORT_HEAD.map(h => h.replace('₹', 'Rs.'))],
+          body: rows.map((e, i) => [i + 1, e.name || '', e.pan_number, rs(e.amount), rs(e.tax_amount), (e.deduction_percentage ?? 0) + '%', e.date || '']),
+          foot: [['', 'TOTAL (' + rows.length + ' entries)', '', rs(totalAmount), rs(totalTax), '', '']],
+          startY: 32,
+          styles: { fontSize: 9, cellPadding: 3 },
+          headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold' },
+          footStyles: { fillColor: [238, 242, 255], textColor: [30, 41, 59], fontStyle: 'bold' },
+          alternateRowStyles: { fillColor: [248, 250, 252] }
+        });
+        doc.save(fileName);
+      }
+
+      // Same audit trail as the Display page exports
+      supabase.from('audit_log').insert({
+        action: format === 'pdf' ? 'EXPORT_PDF' : 'EXPORT_CSV',
+        table_name: 'entries',
+        details: { source: 'chat', format, rowCount: rows.length, filters: describeFilters(a) }
+      }).then(() => {}, () => {});
+
+      return { fileName, count: rows.length, totalAmount, totalTax };
+    }
+
+    // ---- Same safety rules as the Quick Entry / Full Entry / Import pages ----
+    function isValidPAN(pan) {
+      return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(String(pan).toUpperCase());
+    }
+
+    function isRealDate(d) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+      const dt = new Date(d + 'T00:00:00Z');
+      return !isNaN(dt) && dt.toISOString().slice(0, 10) === d;
+    }
+
+    // Amount/tax must be >= 0, deduction 0-100, date a real calendar date (same limits as Full Entry)
+    function checkValues(v) {
+      if (v.amount != null && (!isNum(v.amount) || v.amount < 0)) return 'Amount must be a number of 0 or more.';
+      if (v.tax_amount != null && (!isNum(v.tax_amount) || v.tax_amount < 0)) return 'Tax must be a number of 0 or more.';
+      if (v.deduction_percentage != null && (!isNum(v.deduction_percentage) || v.deduction_percentage < 0 || v.deduction_percentage > 100)) return 'Deduction % must be between 0 and 100.';
+      if (v.date && !isRealDate(v.date)) return '"' + v.date + '" is not a valid date.';
+      return null;
+    }
+
+    // The AI must not invent a PAN: it has to appear in what the user typed (or earlier in this chat for follow-ups)
+    function panWasTyped(pan, texts) {
+      return texts.some(t => String(t || '').toUpperCase().includes(pan));
+    }
+
+    function describeRow(e) {
+      return `${e.pan_number} | ${e.name || '—'} | ${e.date || 'no date'} | ${money(e.amount)}`;
+    }
+
+    // Decide what to do with each new row: add, fill a Quick Entry, skip (duplicate) or error.
+    // Used for single entries typed in the chat and for every row of an imported file.
+    async function planEntries(input) {
+      const rows = input.map(r => ({
+        pan: String(r.pan || '').toUpperCase().trim(),
+        name: String(r.name || '').trim().replace(/\s+/g, ' '),
+        date: r.date || null,
+        amount: r.amount ?? null,
+        tax_amount: r.tax_amount ?? null,
+        deduction_percentage: r.deduction_percentage ?? null,
+        parseError: r.parseError || null,
+        status: null,
+        reason: ''
+      }));
+      const fail = (r, reason) => { r.status = 'error'; r.reason = reason; };
+      const skip = (r, reason) => { r.status = 'skip'; r.reason = reason; };
+
+      rows.forEach(r => {
+        if (r.parseError) return fail(r, r.parseError);
+        if (!isValidPAN(r.pan)) return fail(r, r.pan ? `"${r.pan}" is not a valid PAN (format ABCDE1234F).` : 'No PAN found.');
+        if (r.name.length < 2 || !/[a-z]/i.test(r.name)) return fail(r, r.name ? `"${r.name}" doesn't look like a real name.` : 'Name is missing.');
+        const problem = checkValues(r);
+        if (problem) return fail(r, problem);
+        // Like Full Entry: once amount/tax/deduction is given, a date is required.
+        // With only PAN + name it is a Quick Entry (no date, zero amounts).
+        r.hasDetails = r.amount != null || r.tax_amount != null || r.deduction_percentage != null || !!r.date;
+        if (r.hasDetails && !r.date) return fail(r, 'Date is missing.');
+      });
+
+      const pans = [...new Set(rows.filter(r => !r.status).map(r => r.pan))];
+      const existing = new Map();
+      for (let i = 0; i < pans.length; i += 100) {
+        const { data, error } = await supabase
+          .from('entries').select('id, pan_number, name, date, amount, created_at')
+          .in('pan_number', pans.slice(i, i + 100))
+          .order('created_at', { ascending: false });
+        if (error) throw new Error('Could not check existing entries: ' + error.message);
+        data.forEach(e => {
+          if (!existing.has(e.pan_number)) existing.set(e.pan_number, []);
+          existing.get(e.pan_number).push(e);
+        });
+      }
+
+      const seen = new Map();       // PANs met earlier in this batch
+      const claimed = new Set();    // Quick Entry rows already being completed
+      rows.forEach(r => {
+        if (r.status) return;
+        const db = existing.get(r.pan) || [];
+        const earlier = seen.get(r.pan);
+
+        // One PAN belongs to one person: block a different name on a known PAN
+        const knownName = db[0]?.name ?? earlier?.name;
+        if (knownName && normName(knownName) !== normName(r.name)) {
+          return fail(r, db.length
+            ? `PAN ${r.pan} is registered to "${knownName}", not "${r.name}".`
+            : `This PAN appears earlier in the file as "${knownName}".`);
+        }
+        r.name = knownName || r.name;
+
+        const key = r.date + '|' + Number(r.amount || 0);
+        if (!r.hasDetails) {
+          if (db.length || earlier) return skip(r, `${r.pan} (${r.name}) is already in the register.`);
+          r.status = 'add';
+        } else if (db.some(e => e.date === r.date && Number(e.amount) === Number(r.amount || 0))) {
+          return skip(r, `A ${money(r.amount)} entry dated ${r.date} already exists for ${r.pan}.`);
+        } else if (earlier?.keys.has(key)) {
+          return skip(r, 'Repeated earlier in this file.');
+        } else {
+          // Like Full Entry: fill in the latest Quick Entry (no date yet) instead of adding a second row
+          const skeleton = db.find(e => e.date === null && !claimed.has(e.id));
+          if (skeleton) {
+            claimed.add(skeleton.id);
+            r.status = 'fill';
+            r.skeletonId = skeleton.id;
+            r.reason = 'Fills in the Quick Entry saved earlier without a date.';
+          } else {
+            r.status = 'add';
+          }
+        }
+        const entry = earlier || { name: r.name, keys: new Set() };
+        if (r.hasDetails) entry.keys.add(key);
+        seen.set(r.pan, entry);
+      });
+      return rows;
+    }
+
+    const dbRow = (r) => ({
+      pan_number: r.pan, name: r.name, date: r.date || null,
+      amount: r.amount || 0, tax_amount: r.tax_amount || 0, deduction_percentage: r.deduction_percentage || 0
+    });
+
+    async function commitPlan(rows) {
+      const out = { added: 0, filled: 0, failed: [] };
+      const toInsert = rows.filter(r => r.status === 'add');
+      for (let i = 0; i < toInsert.length; i += 500) {
+        const chunk = toInsert.slice(i, i + 500);
+        const { error } = await supabase.from('entries').insert(chunk.map(dbRow));
+        if (error) chunk.forEach(r => out.failed.push({ row: r, reason: error.message }));
+        else out.added += chunk.length;
+      }
+      for (const r of rows.filter(r => r.status === 'fill')) {
+        const { pan_number, name, ...values } = dbRow(r);
+        const { error } = await supabase.from('entries').update(values).eq('id', r.skeletonId);
+        if (error) out.failed.push({ row: r, reason: error.message });
+        else out.filled++;
+      }
+      return out;
+    }
+
+    // Pick which existing entry of a PAN to change; asks the user to be specific when there are several
+    function pickRows(rows, a, verb) {
+      if (a.entry_date) {
+        const matched = rows.filter(e => e.date === a.entry_date);
+        if (!matched.length) return { reply: { blocks: [T(`No entry for **${rows[0].pan_number}** is dated ${a.entry_date}. Its entries are:`), entriesTable(rows)] } };
+        return { rows: matched };
+      }
+      if (rows.length > 1) {
+        return { reply: { blocks: [T(`**${rows[0].pan_number}** has ${rows.length} entries. Which one should I ${verb}? Tell me the entry's date (for example "the one dated ${rows[0].date || '2024-04-10'}"), or say "all of them".`), entriesTable(rows)] } };
+      }
+      return { rows };
+    }
+
+    // ---- Run an action and build the reply ----
+    async function executeAction(a, ctx = { text: '', earlier: [] }) {
+      const pan = a.pan ? String(a.pan).toUpperCase().trim() : null;
+
+      switch (a.action) {
+        case 'insert': {
+          if (!pan || !a.name) return say('To add an entry I need both a **PAN** and a **name**, for example: "Enter PAN ABCDE1234F for John Doe on 2024-01-15 with amount 5000".');
+          if (!panWasTyped(pan, [ctx.text])) return say(`**Not saved.** Please type the PAN (${pan}) exactly in your message, so nothing is entered by mistake.`);
+          const [p] = await planEntries([{
+            pan, name: a.name, date: a.date || null,
+            amount: a.amount ?? null, tax_amount: a.tax_amount ?? null, deduction_percentage: a.deduction_percentage ?? null
+          }]);
+          if (p.status === 'error') {
+            const hint = /registered to "(.+)"/.exec(p.reason);
+            return say('**Not saved.** ' + p.reason + (hint ? ` Check the PAN, or send it again using the name "${hint[1]}".` : p.reason === 'Date is missing.' ? ' Add the date (for example "on 2024-04-10") and send it again.' : ''));
+          }
+          if (p.status === 'skip') return say(p.reason + ' Nothing new was added.');
+          const result = await commitPlan([p]);
+          if (result.failed.length) return say('**Not saved.** ' + result.failed[0].reason);
+          return {
+            blocks: [
+              T(p.status === 'fill' ? `Done. I completed the Quick Entry for **${p.name}** that was saved earlier without a date.` : `Done. I saved a new entry for **${p.name}**.`),
+              entriesTable([dbRow(p)])
+            ]
+          };
+        }
+
+        case 'search': {
+          const { data, error } = await applyFilters(supabase.from('entries').select('*'), a)
+            .order('created_at', { ascending: false })
+            .limit(MAX_ROWS);
+          if (error) return say('I couldn\'t load the entries: ' + error.message);
+          if (!data.length) return say(`I didn't find any entries (${describeFilters(a)}).`);
+          return {
+            blocks: [
+              T(data.length === 1 ? 'I found **1 entry**.' : `I found **${data.length} entries**${data.length === MAX_ROWS ? ' (showing the latest ' + MAX_ROWS + ')' : ''}.`),
+              entriesTable(data, data.length === MAX_ROWS ? 'Ask for an Excel or PDF file to get the full list.' : '')
+            ]
+          };
+        }
+
+        case 'summary': {
+          const rows = await fetchAllEntries(a);
+          if (!rows.length) return say(`There are no entries to total (${describeFilters(a)}).`);
+          const totalAmount = rows.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+          const totalTax = rows.reduce((s, e) => s + (Number(e.tax_amount) || 0), 0);
+          return {
+            blocks: [
+              T(`Here are the totals for ${describeFilters(a) === 'all entries' ? '**all entries**' : '**' + describeFilters(a) + '**'}:`),
+              { type: 'stats', items: [{ label: 'Entries', value: rows.length.toLocaleString('en-IN') }, { label: 'Total amount', value: money(totalAmount) }, { label: 'Total tax', value: money(totalTax) }] }
+            ]
+          };
+        }
+
+        case 'update': {
+          if (!pan || !isValidPAN(pan)) return say('Which PAN should I update? Please give a valid PAN (for example ABCDE1234F).');
+          if (!panWasTyped(pan, [ctx.text, ...ctx.earlier])) return say(`**Not changed.** Please type the PAN (${pan}) in your message.`);
+          const changes = {};
+          if (isNum(a.amount)) changes.amount = a.amount;
+          if (isNum(a.tax_amount)) changes.tax_amount = a.tax_amount;
+          if (isNum(a.deduction_percentage)) changes.deduction_percentage = a.deduction_percentage;
+          if (a.date) changes.date = a.date;
+          const newName = a.name ? String(a.name).trim().replace(/\s+/g, ' ') : null;
+          if (!Object.keys(changes).length && !newName) return say(`What should I change for **${pan}**? For example "set amount to 7500".`);
+          const problem = checkValues(changes);
+          if (problem) return say('**Not changed.** ' + problem);
+
+          const { data: rows, error: lookupError } = await supabase
+            .from('entries').select('*').eq('pan_number', pan).order('date', { ascending: true });
+          if (lookupError) return say('I couldn\'t load the entries: ' + lookupError.message);
+          if (!rows.length) return say(`There are no entries with PAN **${pan}**.`);
+
+          const done = [];
+          // A name belongs to the PAN, so a name change applies to all of its entries
+          if (newName && normName(newName) !== normName(rows[0].name)) {
+            if (newName.length < 2 || !/[a-z]/i.test(newName)) return say(`**Not changed.** "${newName}" doesn't look like a real name.`);
+            const { error } = await supabase.from('entries').update({ name: newName }).eq('pan_number', pan);
+            if (error) return say('**Not changed.** ' + error.message);
+            done.push(`changed the name to **${newName}** on all ${plural(rows.length)}`);
+          }
+
+          let changed = [];
+          if (Object.keys(changes).length) {
+            const picked = a.all_entries ? { rows } : pickRows(rows, a, 'change');
+            if (picked.reply) {
+              if (done.length) picked.reply.blocks.unshift(T('I ' + done.join(' and ') + '.'));
+              return picked.reply;
+            }
+            for (const target of picked.rows) {
+              const after = { ...target, ...changes };
+              const clash = rows.find(e => e.id !== target.id && e.date === after.date && Number(e.amount) === Number(after.amount));
+              if (clash) return say((done.length ? 'I ' + done.join(' and ') + ', but ' : '**Not changed:** ') + `that change would duplicate another entry (${describeRow(clash)}).`);
+            }
+            const { data, error } = await supabase.from('entries').update(changes).in('id', picked.rows.map(e => e.id)).select('*');
+            if (error) return say('**Not changed.** ' + error.message);
+            changed = data || [];
+            done.push('updated ' + Object.entries(changes).map(([k, v]) => k.replace(/_percentage/, ' %').replace(/_/g, ' ') + ' to ' + (k === 'date' ? v : k.includes('percentage') ? v + '%' : money(v))).join(', ') + ' on ' + plural(picked.rows.length));
+          }
+
+          if (!done.length) return say(`Nothing to change: **${pan}** already has those values.`);
+          const blocks = [T('Done. I ' + done.join(' and ') + '.')];
+          if (changed.length) blocks.push(entriesTable(changed));
+          return { blocks };
+        }
+
+        case 'delete': {
+          if (!pan || !isValidPAN(pan)) return say('Which PAN should I delete? Please give a valid PAN (for example ABCDE1234F).');
+          if (!panWasTyped(pan, [ctx.text, ...ctx.earlier])) return say(`**Not deleted.** Please type the PAN (${pan}) in your message.`);
+          const { data: rows, error: lookupError } = await supabase
+            .from('entries').select('*').eq('pan_number', pan).order('date', { ascending: true });
+          if (lookupError) return say('I couldn\'t load the entries: ' + lookupError.message);
+          if (!rows.length) return say(`There are no entries with PAN **${pan}**.`);
+          const picked = a.all_entries ? { rows } : pickRows(rows, a, 'delete');
+          if (picked.reply) return picked.reply;
+          if (!confirm('Delete ' + plural(picked.rows.length) + ':\n\n' + picked.rows.map(describeRow).join('\n') + '\n\nThis cannot be undone.')) return say('Okay, I didn\'t delete anything.');
+          const { data, error } = await supabase.from('entries').delete().in('id', picked.rows.map(e => e.id)).select('id');
+          if (error) return say('**Not deleted.** ' + error.message);
+          return { blocks: [T(`Done. I deleted ${plural(data.length)} for **${pan}**.`), entriesTable(picked.rows)] };
+        }
+
+        case 'export': {
+          const request = { ...a, format: a.format === 'pdf' ? 'pdf' : 'excel' };
+          delete request.reply;
+          const result = await exportEntries(request);
+          if (typeof result === 'string') return say(result);
+          return {
+            blocks: [
+              T(`Here's your ${request.format === 'pdf' ? 'PDF' : 'Excel file'} with ${plural(result.count)} (${describeFilters(request)}). It should be in your downloads already. Total amount ${money(result.totalAmount)}, total tax ${money(result.totalTax)}.`),
+              { type: 'file', fileName: result.fileName, format: request.format, count: result.count, request }
+            ]
+          };
+        }
+
+        default: {
+          if (a.reply) return say(a.reply);
+          // The AI chose "just chat" but gave no reply text
+          const greeting = /^\s*(hi|hello|hey|hii+|namaste|good\s+(morning|afternoon|evening|night)|thanks|thank\s+you)\b/i.test(ctx.text);
+          return say((greeting ? 'Hello! ' : 'I\'m not sure what you\'d like me to do. ') +
+            'I can add, find, total, update, delete and export PAN entries, or import an Excel, CSV, PDF or Word file with the paperclip. For example: "Show me all entries" or "Enter PAN ABCDE1234F for John Doe on 2024-01-15 with amount 5000".');
+        }
+      }
+    }
+
+    // ---- Reading attached files (Excel, CSV, PDF, Word, text) ----
+    function isoDate(y, m, d) {
+      if (y < 100) y += 2000;
+      const s = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      return isRealDate(s) ? s : null;
+    }
+
+    const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const monthNum = (name) => MONTHS.indexOf(String(name).slice(0, 3).toLowerCase()) + 1;
+
+    // Accepts Excel dates, 2024-04-10, 10/04/2024 (day first, as used in India), 10-Apr-2024, Apr 10, 2024
+    function normDate(v) {
+      if (v instanceof Date) {
+        if (isNaN(v)) return null;
+        const d = new Date(v.getTime() + 12 * 3600 * 1000); // Excel dates can be a few seconds before midnight
+        return isoDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
+      }
+      const s = String(v ?? '').trim().replace(/[T\s]\d{1,2}:\d{2}(:\d{2})?.*$/, '');
+      let m;
+      if ((m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/))) return isoDate(+m[1], +m[2], +m[3]);
+      if ((m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2}|\d{4})$/))) return isoDate(+m[3], +m[2], +m[1]);
+      if ((m = s.match(/^(\d{1,2})[\s-]+([a-z]{3,9})\.?[\s-,]+(\d{2}|\d{4})$/i)) && monthNum(m[2])) return isoDate(+m[3], monthNum(m[2]), +m[1]);
+      if ((m = s.match(/^([a-z]{3,9})\.?\s+(\d{1,2}),?\s+(\d{4})$/i)) && monthNum(m[1])) return isoDate(+m[3], monthNum(m[1]), +m[2]);
+      return null;
+    }
+
+    // Number from "₹ 25,000.00", "Rs. 2,500", "10%"; null when empty; the original text when it isn't a number
+    function parseNum(v) {
+      if (typeof v === 'number') return v;
+      const raw = String(v ?? '').trim();
+      if (!raw) return null;
+      const s = raw.replace(/₹|rs\.?|inr|,|\s|%/gi, '');
+      return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : raw;
+    }
+
+    // Split a line of text into cells; keeps multi-word names together
+    function splitLine(line) {
+      const s = String(line).replace(/\b(\d{1,2})[\s-]([A-Za-z]{3,9})[\s-,]+(\d{4})\b/g, (all, d, mo, y) => normDate(`${d} ${mo} ${y}`) || all);
+      if (/\t/.test(s)) return s.split('\t');
+      if (/\|/.test(s)) return s.split('|');
+      if (/\s{2,}/.test(s.trim())) return s.trim().split(/\s{2,}/);
+      if (/,\s*[A-Za-z]/.test(s) && s.split(',').length >= 3) return s.split(/,(?!\d{2,3}(?:\D|$))/);
+      const out = [];
+      let words = [];
+      s.trim().split(/\s+/).forEach(tok => {
+        const isWord = /^[A-Za-z&.'()/-]+$/.test(tok) && !/^rs\.?$/i.test(tok);
+        if (isWord) { words.push(tok); return; }
+        if (words.length) { out.push(words.join(' ')); words = []; }
+        if (!/^rs\.?$/i.test(tok)) out.push(tok);
+      });
+      if (words.length) out.push(words.join(' '));
+      return out;
+    }
+
+    // Guess the fields of a row from its cells when there is no header row
+    function rowFromCells(rawCells, line) {
+      let cells = rawCells.map(c => c instanceof Date ? normDate(c) : String(c ?? '')).map(s => s.trim()).filter(Boolean);
+      if (cells.length === 1) cells = splitLine(cells[0]).map(s => s.trim()).filter(Boolean);
+      const pans = line.toUpperCase().match(new RegExp(PAN_RE.source, 'g')) || [];
+      const r = { pan: pans[0] || '', name: '', date: null, amount: null, tax_amount: null, deduction_percentage: null, line };
+      if (pans.length !== 1) return { ...r, unclear: true };
+
+      const nums = [];
+      const texts = [];
+      cells.forEach((c, i) => {
+        const rest = c.toUpperCase().includes(r.pan) ? c.replace(new RegExp(r.pan, 'i'), '').trim() : c;
+        if (!rest) return;
+        const d = normDate(rest);
+        if (d && !r.date) { r.date = d; return; }
+        const n = parseNum(rest);
+        if (typeof n === 'number' && /%$/.test(rest)) { r.deduction_percentage = n; return; }
+        if (typeof n === 'number') { nums.push({ n, i, int: /^\d+$/.test(rest) }); return; }
+        if (/[a-z]/i.test(rest) && !/^(rs\.?|inr|total|sl\.?\s*no\.?)$/i.test(rest)) texts.push(rest);
+      });
+      // A whole number in the first column is the serial number (Sl.No)
+      if (nums.length > 1 && nums[0].i === 0 && nums[0].int) nums.shift();
+      r.amount = nums[0] ? nums[0].n : null;
+      r.tax_amount = nums[1] ? nums[1].n : null;
+      if (r.deduction_percentage == null && nums[2]) r.deduction_percentage = nums[2].n;
+      r.name = texts.sort((a, b) => b.length - a.length)[0] || '';
+      const odd = /\d|[()@:;#]|\b(pan|rs|inr|tds|tax|amount|received|paid|dated?|sum|from|payment)\b/i.test(r.name) || r.name.split(/\s+/).length > 6;
+      r.unclear = !r.name || odd || nums.length > 3 || texts.length > 2;
+      return r;
+    }
+
+    // Recognise a header row like "PAN Number | Organization / Name | Amount | Tax | Deduction | Date"
+    function headerMap(cells) {
+      const map = {};
+      cells.forEach((c, i) => {
+        const h = String(c).toLowerCase();
+        if (!h) return;
+        if (/\bpan\b/.test(h)) map.pan ??= i;
+        else if (/deduct|%|percent/.test(h)) map.ded ??= i;
+        else if (/\btax\b|tds/.test(h)) map.tax ??= i;
+        else if (/amount|amt|value|paid|gross/.test(h)) map.amount ??= i;
+        else if (/date/.test(h)) map.date ??= i;
+        else if (/name|organi[sz]ation|party|deductee|payee|company/.test(h)) map.name ??= i;
+      });
+      return map.pan != null ? map : null;
+    }
+
+    function rowsFromGrid(grid) {
+      const out = [];
+      let map = null;
+      grid.forEach(rawRow => {
+        const cells = (rawRow || []).map(c => c instanceof Date ? c : String(c ?? '').trim());
+        if (!cells.some(c => c !== '')) return;
+        const line = cells.map(c => c instanceof Date ? normDate(c) : c).filter(Boolean).join(' | ');
+        if (!PAN_RE.test(line.toUpperCase())) {
+          // A mistyped PAN under a PAN column is shown as a problem row instead of being dropped
+          const badPan = map && map.name != null && String(cells[map.pan] ?? '').trim();
+          if (badPan && /^[A-Z0-9]{6,14}$/i.test(badPan) && String(cells[map.name] ?? '').trim()) {
+            out.push({ pan: badPan.toUpperCase(), name: String(cells[map.name]).trim(), line });
+            return;
+          }
+          map = headerMap(cells) || map;   // header, title or totals row
+          return;
+        }
+        if (map && map.name != null) {
+          const get = (k) => map[k] != null ? cells[map[k]] : '';
+          const panCell = String(get('pan')).toUpperCase().match(PAN_RE);
+          const rawDate = get('date');
+          out.push({
+            pan: panCell ? panCell[1] : (line.toUpperCase().match(PAN_RE) || [])[1],
+            name: String(get('name')).trim(),
+            date: rawDate === '' ? null : (normDate(rawDate) || String(rawDate)),
+            amount: parseNum(get('amount')),
+            tax_amount: parseNum(get('tax')),
+            deduction_percentage: parseNum(get('ded')),
+            line
+          });
+        } else {
+          out.push(rowFromCells(cells, line));
+        }
+      });
+      return out;
+    }
+
+    async function pdfToGrid(file, onStatus) {
+      await loadScript(PDFJS_URL);
+      pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+      const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+      const grid = [];
+      let anyText = false;
+      for (let p = 1; p <= pdf.numPages; p++) {
+        onStatus(`Reading page ${p} of ${pdf.numPages}…`);
+        const content = await (await pdf.getPage(p)).getTextContent();
+        const lines = [];
+        content.items.forEach(it => {
+          if (!it.str || !it.str.trim()) return;
+          anyText = true;
+          const x = it.transform[4];
+          const y = it.transform[5];
+          let line = lines.find(l => Math.abs(l.y - y) < 3);
+          if (!line) lines.push(line = { y, items: [] });
+          line.items.push({ x, end: x + it.width, size: Math.abs(it.transform[0]) || 10, str: it.str });
+        });
+        lines.sort((a, b) => b.y - a.y).forEach(l => {
+          l.items.sort((a, b) => a.x - b.x);
+          // Text pieces close together belong to the same cell
+          const cells = [];
+          let prev = null;
+          l.items.forEach(it => {
+            const gap = prev ? it.x - prev.end : Infinity;
+            if (prev && gap < it.size * 0.15) cells[cells.length - 1] += it.str;
+            else if (prev && gap < it.size * 0.6) cells[cells.length - 1] += ' ' + it.str;
+            else cells.push(it.str);
+            prev = it;
+          });
+          grid.push(cells);
+        });
+      }
+      if (!anyText) throw new Error('This PDF has no readable text (it may be a scan or a photo). Please attach the Excel or CSV version instead.');
+      return grid;
+    }
+
+    async function docxToGrids(file) {
+      await loadScript(MAMMOTH_URL);
+      const { value: html } = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const grids = [];
+      doc.querySelectorAll('table').forEach(t => {
+        grids.push([...t.querySelectorAll('tr')].map(tr => [...tr.children].map(td => td.textContent.trim())));
+        t.remove();
+      });
+      const lines = [...doc.body.querySelectorAll('p, li')].map(p => p.textContent.trim()).filter(Boolean);
+      if (lines.length) grids.push(lines.map(splitLine));
+      return grids;
+    }
+
+    async function readFileRows(file, onStatus) {
+      const ext = fileExt(file.name);
+      const grids = [];
+      if (['xlsx', 'xls', 'csv'].includes(ext)) {
+        await loadScript(XLSX_URL);
+        const wb = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+        wb.SheetNames.forEach(n => grids.push(XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' })));
+      } else if (ext === 'pdf') {
+        grids.push(await pdfToGrid(file, onStatus));
+      } else if (ext === 'docx') {
+        grids.push(...await docxToGrids(file));
+      } else if (ext === 'txt') {
+        grids.push((await file.text()).split(/\r?\n/).map(splitLine));
+      } else if (ext === 'doc') {
+        throw new Error('Old Word (.doc) files can\'t be read. Open it in Word, save it as .docx, and attach it again.');
+      } else {
+        throw new Error('I can read Excel (.xlsx, .xls), CSV, PDF, Word (.docx) and text files.');
+      }
+      return grids.flatMap(rowsFromGrid);
+    }
+
+    // Lines the browser couldn't make sense of go to the AI, in small batches.
+    // Everything the AI returns is checked against the original line, so it can't invent values.
+    async function aiReadLines(rows, onStatus) {
+      const prompt = `Each numbered line comes from a document listing PAN register entries. Return JSON {"rows":[{"line":<number>,"pan":"","name":"","date":"YYYY-MM-DD","amount":0,"tax_amount":0,"deduction_percentage":0}]}.
+Copy values exactly from the line and leave out any field that isn't on it. Dates like 10/04/2024 are day/month/year. Skip lines that are not entries. Never invent anything.`;
+      for (let i = 0; i < rows.length; i += 12) {
+        const batch = rows.slice(i, i + 12);
+        onStatus(`Using the AI to read ${plural(rows.length, 'unclear line')}…`);
+        let got = [];
+        try {
+          const json = await askGroqJSON([
+            { role: 'system', content: prompt },
+            { role: 'user', content: batch.map((r, k) => `${k + 1}: ${r.line}`).join('\n') }
+          ], 900, onStatus);
+          got = Array.isArray(json.rows) ? json.rows : [];
+        } catch (e) {
+          batch.forEach(r => { r.parseError = 'Couldn\'t read this line automatically (the AI is busy). Please check it.'; });
+          continue;
+        }
+        batch.forEach((r, k) => {
+          const g = got.find(x => Number(x.line) === k + 1);
+          if (!g) { r.parseError = 'Couldn\'t read this line: ' + r.line.slice(0, 80); return; }
+          const pan = String(g.pan || '').toUpperCase();
+          const name = String(g.name || '').trim();
+          const lineNums = (r.line.match(/\d[\d,]*(\.\d+)?/g) || []).map(s => Number(s.replace(/,/g, '')));
+          const onLine = (v) => v == null || v === '' || lineNums.some(n => Math.abs(n - Number(v)) < 0.005);
+          if (!isValidPAN(pan) || !r.line.toUpperCase().includes(pan)) { r.parseError = 'Couldn\'t find a valid PAN on this line.'; return; }
+          if (!name || !normName(r.line).includes(normName(name))) { r.parseError = 'Couldn\'t find the name on this line.'; return; }
+          if (!onLine(g.amount) || !onLine(g.tax_amount) || !onLine(g.deduction_percentage)) { r.parseError = 'The numbers on this line are unclear.'; return; }
+          Object.assign(r, {
+            pan, name, date: g.date || null,
+            amount: g.amount ?? null, tax_amount: g.tax_amount ?? null, deduction_percentage: g.deduction_percentage ?? null,
+            unclear: false
+          });
+        });
+      }
+    }
+
+    async function handleFile(file, onStatus) {
+      const rows = await readFileRows(file, onStatus);
+      if (!rows.length) return say(`I couldn't find any PAN entries in **${file.name}**. Each row needs a PAN (like ABCDE1234F) and a name.`);
+      if (rows.length > MAX_IMPORT_ROWS) return say(`**${file.name}** has ${rows.length} rows. Please split it into files of up to ${MAX_IMPORT_ROWS} rows.`);
+
+      const unclear = rows.filter(r => r.unclear);
+      if (unclear.length) await aiReadLines(unclear, onStatus);
+
+      onStatus('Checking for duplicates…');
+      const plan = await planEntries(rows);
+      const block = {
+        type: 'import',
+        fileName: file.name,
+        rows: plan.map(r => ({ pan: r.pan, name: r.name, date: r.date, amount: r.amount, tax_amount: r.tax_amount, deduction_percentage: r.deduction_percentage, parseError: r.parseError, status: r.status, reason: r.reason })),
+        done: null
+      };
+      const ready = plan.filter(r => r.status === 'add' || r.status === 'fill').length;
+      let text = `I read **${file.name}** and found **${plural(rows.length, 'row')}**.`;
+      if (unclear.length) text += ` ${plural(unclear.length, 'line')} had an unusual layout, so the AI helped read ${unclear.length === 1 ? 'it' : 'them'}. Please double-check ${unclear.length === 1 ? 'that row' : 'those rows'}.`;
+      text += ready ? ' Nothing is saved yet. Review the rows below, then press **Add** to save the new ones.' : '';
+      return { blocks: [T(text), block] };
+    }
+
+    async function commitImport(block, msg, btn) {
+      if (busy) return;
+      busy = true;
+      updateSendState();
+      btn.disabled = true;
+      btn.textContent = 'Adding…';
+      try {
+        // Check again right before saving, in case entries were added since the preview
+        const plan = await planEntries(block.rows);
+        const result = await commitPlan(plan);
+        result.failed.forEach(f => { f.row.status = 'error'; f.row.reason = 'Not saved: ' + f.reason; });
+        block.rows = plan.map(r => ({ pan: r.pan, name: r.name, date: r.date, amount: r.amount, tax_amount: r.tax_amount, deduction_percentage: r.deduction_percentage, parseError: r.parseError, status: r.status, reason: r.reason }));
+        block.done = { added: result.added, filled: result.filled, failed: result.failed.length };
+      } catch (err) {
+        alert('Import failed: ' + err.message);
+      }
+      saveChats();
+      const node = btn.closest('.q-msg');
+      if (node) node.replaceWith(renderMessage(msg));
+      busy = false;
+      updateSendState();
+    }
+
+    // ---- Sending ----
+    async function handleText(text, history, onStatus) {
+      let action;
+      let note = null;
+      try {
+        action = await askAI(text, history, onStatus);
+      } catch (aiError) {
+        console.warn('AI unavailable, using local parser:', aiError);
+        action = parseLocally(text);
+        note = 'The AI is busy right now, so the basic parser handled this message.';
+      }
+      onStatus('Working…');
+      const result = await executeAction(action, { text, earlier: history.map(messageText) });
+      if (note) result.blocks.push({ type: 'note', text: note });
+      result.action = Object.fromEntries(Object.entries(action).filter(([k, v]) => v !== null && v !== undefined && k !== 'reply'));
+      return result;
+    }
+
+    async function sendMessage() {
+      const text = messageInput.value.trim();
+      const file = pendingFile;
+      if ((!text && !file) || busy) return;
+      busy = true;
+
+      // The first message of a new chat creates it in the sidebar
+      let chat = getChat(activeId);
+      if (!chat) {
+        const titleSource = text || file.name;
+        chat = { id: newId(), title: titleSource.length > 40 ? titleSource.slice(0, 40) + '…' : titleSource, updatedAt: Date.now(), messages: [] };
+        chats.unshift(chat);
+        activeId = chat.id;
+      }
+      const history = chat.messages.slice();
+      const userMsg = { role: 'user', text, files: file ? [{ name: file.name, size: file.size }] : [] };
+      chat.messages.push(userMsg);
+      saveChats();
+      renderChatList();
+      setEmptyState();
+
+      messageInput.value = '';
+      autosize();
+      clearAttachment();
+      updateSendState();
+      appendMessage(userMsg);
+      const thinking = appendThinking(file ? 'Reading ' + file.name + '…' : 'Thinking…');
+      const onStatus = (s) => thinking.setStatus(s);
+
+      let reply;
+      try {
+        reply = file ? await handleFile(file, onStatus) : await handleText(text, history, onStatus);
+      } catch (err) {
+        reply = say('Sorry, something went wrong: ' + err.message);
+      }
+
+      const saved = { role: 'assistant', blocks: reply.blocks };
+      if (reply.action) saved.action = reply.action;
+      // Save the reply even if the user switched to another chat meanwhile
+      chat.messages.push(saved);
+      chat.updatedAt = Date.now();
+      chats = [chat, ...chats.filter(c => c.id !== chat.id)];
+      saveChats();
+      renderChatList();
+      if (thinking.isConnected) {
+        thinking.replaceWith(renderMessage(saved));
+        scrollToBottom();
+      } else if (activeId === chat.id) {
+        appendMessage(saved);
+      }
+
+      busy = false;
+      updateSendState();
+      messageInput.focus();
+    }
+
+    // ---- Composer ----
+    function autosize() {
+      messageInput.style.height = 'auto';
+      messageInput.style.height = Math.min(messageInput.scrollHeight, 220) + 'px';
+    }
+
+    function updateSendState() {
+      sendBtn.disabled = busy || (!messageInput.value.trim() && !pendingFile);
+    }
+
+    function setAttachment(file) {
+      if (!file) return;
+      if (file.size > MAX_FILE_MB * 1024 * 1024) {
+        alert(`"${file.name}" is larger than ${MAX_FILE_MB} MB.`);
+        return;
+      }
+      pendingFile = file;
+      attachments.textContent = '';
+      const card = fileCard(file.name, fileExt(file.name).toUpperCase() + ' · ' + formatSize(file.size), true);
+      const remove = el('button', 'q-remove');
+      remove.type = 'button';
+      remove.title = 'Remove';
+      remove.appendChild(icon('x', 12));
+      remove.addEventListener('click', () => { clearAttachment(); updateSendState(); });
+      card.appendChild(remove);
+      attachments.appendChild(card);
+      updateSendState();
+      messageInput.focus();
+    }
+
+    function clearAttachment() {
+      pendingFile = null;
+      attachments.textContent = '';
+      fileInput.value = '';
+    }
+
+    messageForm.addEventListener('submit', (e) => { e.preventDefault(); sendMessage(); });
+
+    messageInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    messageInput.addEventListener('input', () => { autosize(); updateSendState(); });
+
+    $('attachBtn').addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => setAttachment(fileInput.files[0]));
+
+    // Drag a file anywhere onto the chat to attach it
+    let dragDepth = 0;
+    main.addEventListener('dragenter', (e) => { if ([...e.dataTransfer.types].includes('Files')) { dragDepth++; main.classList.add('dragging'); } });
+    main.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; main.classList.remove('dragging'); } });
+    main.addEventListener('dragover', (e) => e.preventDefault());
+    main.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dragDepth = 0;
+      main.classList.remove('dragging');
+      if (e.dataTransfer.files[0]) setAttachment(e.dataTransfer.files[0]);
+    });
+
+    $('suggestions').addEventListener('click', (e) => {
+      const chip = e.target.closest('.q-chip');
+      if (!chip) return;
+      if (chip.dataset.attach) { fileInput.click(); return; }
+      messageInput.value = chip.dataset.prompt;
+      autosize();
+      updateSendState();
+      sendMessage();
+    });
+
+    $('newChatBtn').addEventListener('click', () => { openChat(null); app.classList.remove('drawer-open'); });
+    $('menuBtn').addEventListener('click', () => app.classList.toggle('drawer-open'));
+    $('backdrop').addEventListener('click', () => app.classList.remove('drawer-open'));
+
+    document.getElementById('logoutBtn').addEventListener('click', async function () {
+      await supabase.auth.signOut();
+      window.location.href = 'login.html';
+    });
+
+    // ---- Start ----
+    const email = session?.user?.email || '';
+    $('userEmail').textContent = email;
+    $('userAvatar').textContent = (email[0] || 'U').toUpperCase();
+    const hour = new Date().getHours();
+    $('greeting').textContent = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
+    // Resume where the user left off
+    let lastActive = null;
+    try { lastActive = localStorage.getItem(ACTIVE_KEY); } catch (e) {}
+    openChat(lastActive || (chats[0] && chats[0].id));
+  </script>
+
+</body>
+</html>
