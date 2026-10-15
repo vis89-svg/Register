@@ -8,8 +8,18 @@
   function read(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
   function write(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
 
-  // ---- Light / dark mode (light is the default) ----
-  if (read('koda-theme') === 'dark') root.setAttribute('data-theme', 'dark');
+  // ---- Light / dark mode ----
+  // A choice made with the sun/moon button wins; otherwise follow the device,
+  // and use dark (black) unless the device asks for light.
+  var lightQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+  function applyTheme() {
+    var saved = read('koda-theme');
+    var dark = saved ? saved === 'dark' : !(lightQuery && lightQuery.matches);
+    if (dark) root.setAttribute('data-theme', 'dark');
+    else root.removeAttribute('data-theme');
+  }
+  applyTheme();
+  if (lightQuery && lightQuery.addEventListener) lightQuery.addEventListener('change', applyTheme);
 
   window.kodaToggleTheme = function () {
     var dark = root.getAttribute('data-theme') !== 'dark';

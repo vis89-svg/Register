@@ -26,9 +26,73 @@
       --q-bubble: #efece3;
       --q-accent: #c96442;
       --q-accent-hover: #b4553a;
+      --q-text-soft: #3d3b36;
+      --q-heading: #2b2a27;
+      --q-active: #e6e2d6;
+      --q-danger: #a3392a;
+      --q-danger-bg: #ddd8ca;
+      --q-soft-bg: #f6f4ee;
+      --q-table-text: #4a4842;
+      --q-row-line: #f0ede5;
+      --q-primary-bg: #1f1e1d;
+      --q-primary-text: #ffffff;
+      --q-primary-hover: #3d3b36;
+      --q-avatar-bg: #3d3b36;
+      --q-avatar-text: #ffffff;
+      --q-focus-border: #bfb9a8;
+      --q-shadow: rgba(31, 30, 29, 0.05);
+      --q-shadow-focus: rgba(31, 30, 29, 0.08);
+      --q-drop-bg: rgba(250, 249, 245, 0.92);
+      --q-backdrop: rgba(31, 30, 29, 0.25);
+      --pill-add-bg: #e5f1e7; --pill-add: #2b6a3a;
+      --pill-fill-bg: #e4edf7; --pill-fill: #2a5a8a;
+      --pill-skip-bg: #eeebe3; --pill-skip: #6b6a63;
+      --pill-error-bg: #f8e4df; --pill-error: #a3392a;
       --q-serif: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
       --q-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
+
+    /* Dark mode: same black as the welcome page and Koda login */
+    :root[data-theme="dark"] {
+      --q-page: #000000;
+      --q-bg: #0b0b0b;
+      --q-sidebar: #141414;
+      --q-card: #181818;
+      --q-border: #262626;
+      --q-border-strong: #363636;
+      --q-text: #ecebe6;
+      --q-muted: #a3a097;
+      --q-faint: #75736b;
+      --q-hover: #1f1f1f;
+      --q-bubble: #242424;
+      --q-text-soft: #d6d4cc;
+      --q-heading: #f2f1ec;
+      --q-active: #262626;
+      --q-danger: #ff8a7a;
+      --q-danger-bg: #3a1f1a;
+      --q-soft-bg: #1f1f1f;
+      --q-table-text: #c9c7bf;
+      --q-row-line: #222222;
+      --q-primary-bg: #ecebe6;
+      --q-primary-text: #111111;
+      --q-primary-hover: #d6d4cc;
+      --q-avatar-bg: #ecebe6;
+      --q-avatar-text: #111111;
+      --q-focus-border: #4a4a4a;
+      --q-shadow: rgba(0, 0, 0, 0.4);
+      --q-shadow-focus: rgba(0, 0, 0, 0.5);
+      --q-drop-bg: rgba(11, 11, 11, 0.92);
+      --q-backdrop: rgba(0, 0, 0, 0.55);
+      --pill-add-bg: #15301c; --pill-add: #8fd19e;
+      --pill-fill-bg: #142538; --pill-fill: #8bb8e8;
+      --pill-skip-bg: #232323; --pill-skip: #a3a097;
+      --pill-error-bg: #3a1a16; --pill-error: #ff8a7a;
+    }
+
+    /* The flower logo is black; show it white on dark */
+    :root[data-theme="dark"] .q-logo { filter: invert(1); }
+
+    body.qoda { transition: background 0.3s ease, color 0.3s ease; }
 
     html, body.qoda { height: 100%; }
 
@@ -102,7 +166,7 @@
       gap: 10px;
       padding: 7px 8px;
       border-radius: 8px;
-      color: #3d3b36;
+      color: var(--q-text-soft);
       text-decoration: none;
       font: 400 0.9rem var(--q-sans);
     }
@@ -169,11 +233,11 @@
       border-radius: 8px;
       cursor: pointer;
       font: 400 0.875rem var(--q-sans);
-      color: #3d3b36;
+      color: var(--q-text-soft);
     }
 
     .q-item:hover { background: var(--q-hover); }
-    .q-item.active { background: #e6e2d6; color: var(--q-text); }
+    .q-item.active { background: var(--q-active); color: var(--q-text); }
 
     .q-item-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -192,7 +256,7 @@
     }
 
     .q-item:hover .q-item-delete, .q-item.active .q-item-delete { opacity: 1; }
-    .q-item-delete:hover { background: #ddd8ca; color: #a3392a; }
+    .q-item-delete:hover { background: var(--q-danger-bg); color: var(--q-danger); }
 
     .q-user {
       display: flex;
@@ -210,8 +274,8 @@
       width: 28px;
       height: 28px;
       border-radius: 50%;
-      background: #3d3b36;
-      color: #fff;
+      background: var(--q-avatar-bg);
+      color: var(--q-avatar-text);
       display: grid;
       place-items: center;
       font-weight: 600;
@@ -221,7 +285,7 @@
 
     .q-user-email { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .q-user .q-icon-btn { width: 30px; height: 30px; }
-    .q-user .q-icon-btn:hover { color: #a3392a; }
+    .q-user #logoutBtn:hover { color: var(--q-danger); }
 
     /* Main column */
     .q-main {
@@ -245,7 +309,7 @@
       flex: 1;
       min-width: 0;
       font: 500 0.92rem var(--q-sans);
-      color: #3d3b36;
+      color: var(--q-text-soft);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -266,6 +330,13 @@
 
     .q-icon-btn:hover { background: var(--q-hover); color: var(--q-text); }
     .q-menu-btn, .q-top-new { display: none; }
+
+    .q-theme-btn svg { grid-area: 1 / 1; transition: opacity 0.3s, transform 0.4s; }
+    .q-theme-btn { display: grid; }
+    .q-side-theme { display: none; }
+    .q-theme-btn .moon { opacity: 0; transform: rotate(-90deg) scale(0.6); }
+    :root[data-theme="dark"] .q-theme-btn .sun { opacity: 0; transform: rotate(90deg) scale(0.6); }
+    :root[data-theme="dark"] .q-theme-btn .moon { opacity: 1; transform: none; }
     .q-app.collapsed .q-menu-btn { display: grid; }
 
     .q-scroller {
@@ -301,7 +372,7 @@
       font-weight: 400;
       font-size: 2.2rem;
       letter-spacing: -0.02em;
-      color: #2b2a27;
+      color: var(--q-heading);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -417,10 +488,10 @@
     .q-table th {
       position: sticky;
       top: 0;
-      background: #f6f4ee;
+      background: var(--q-soft-bg);
       text-align: left;
       font-weight: 600;
-      color: #4a4842;
+      color: var(--q-table-text);
       padding: 9px 12px;
       border-bottom: 1px solid var(--q-border);
       white-space: nowrap;
@@ -428,12 +499,14 @@
 
     .q-table td {
       padding: 8px 12px;
-      border-bottom: 1px solid #f0ede5;
+      border-bottom: 1px solid var(--q-row-line);
       vertical-align: top;
       white-space: nowrap;
     }
 
     .q-table td.wrap { white-space: normal; min-width: 140px; max-width: 260px; }
+    /* The website's shared table colours are for white pages; Koda's tables follow the theme */
+    .q-table td { color: var(--q-text); background: transparent; }
 
     .q-table tr:last-child td { border-bottom: none; }
     .q-table .num { text-align: right; white-space: nowrap; }
@@ -506,10 +579,10 @@
       white-space: nowrap;
     }
 
-    .q-btn:hover { background: #f6f4ee; }
+    .q-btn:hover { background: var(--q-soft-bg); }
     .q-btn:disabled { opacity: 0.55; cursor: wait; }
-    .q-btn.primary { background: var(--q-text); border-color: var(--q-text); color: #fff; }
-    .q-btn.primary:hover { background: #3d3b36; }
+    .q-btn.primary { background: var(--q-primary-bg); border-color: var(--q-primary-bg); color: var(--q-primary-text); }
+    .q-btn.primary:hover { background: var(--q-primary-hover); }
 
     /* Import preview */
     .q-chips { display: flex; flex-wrap: wrap; gap: 6px; font-family: var(--q-sans); }
@@ -524,11 +597,11 @@
       white-space: nowrap;
     }
 
-    .q-pill.add { background: #e5f1e7; color: #2b6a3a; }
-    .q-pill.fill { background: #e4edf7; color: #2a5a8a; }
-    .q-pill.skip { background: #eeebe3; color: #6b6a63; }
-    .q-pill.error { background: #f8e4df; color: #a3392a; }
-    .q-pill.done { background: #e5f1e7; color: #2b6a3a; }
+    .q-pill.add { background: var(--pill-add-bg); color: var(--pill-add); }
+    .q-pill.fill { background: var(--pill-fill-bg); color: var(--pill-fill); }
+    .q-pill.skip { background: var(--pill-skip-bg); color: var(--pill-skip); }
+    .q-pill.error { background: var(--pill-error-bg); color: var(--pill-error); }
+    .q-pill.done { background: var(--pill-add-bg); color: var(--pill-add); }
 
     .q-reason { display: block; font-size: 0.76rem; color: var(--q-muted); margin-top: 3px; white-space: normal; min-width: 180px; max-width: 260px; }
 
@@ -554,12 +627,12 @@
       background: var(--q-card);
       border: 1px solid var(--q-border-strong);
       border-radius: 20px;
-      box-shadow: 0 4px 20px rgba(31, 30, 29, 0.05);
+      box-shadow: 0 4px 20px var(--q-shadow);
       padding: 12px 12px 10px 16px;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
 
-    .q-composer:focus-within { border-color: #bfb9a8; box-shadow: 0 4px 24px rgba(31, 30, 29, 0.08); }
+    .q-composer:focus-within { border-color: var(--q-focus-border); box-shadow: 0 4px 24px var(--q-shadow-focus); }
 
     .q-attachments { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
     .q-attachments:empty { display: none; }
@@ -644,7 +717,7 @@
       border: 1px solid var(--q-border);
       border-radius: 10px;
       background: var(--q-bg);
-      color: #4a4842;
+      color: var(--q-table-text);
       font: 400 0.85rem var(--q-sans);
       cursor: pointer;
     }
@@ -667,7 +740,7 @@
       inset: 10px;
       border: 2px dashed var(--q-accent);
       border-radius: 14px;
-      background: rgba(250, 249, 245, 0.92);
+      background: var(--q-drop-bg);
       z-index: 5;
       place-items: center;
       font: 500 1rem var(--q-sans);
@@ -697,6 +770,9 @@
 
       .q-collapse-btn { display: none; }
       .q-top-new { display: grid; }
+      /* Phones: the light/dark toggle lives in the menu, next to Log out */
+      .q-topbar .q-theme-btn { display: none; }
+      .q-side-theme { display: grid; }
       .q-topbar { height: 50px; padding: 0 8px; border-bottom: 1px solid var(--q-border); }
       .q-main.empty .q-topbar { border-bottom: none; }
       .q-title { text-align: center; }
@@ -711,7 +787,7 @@
         position: absolute;
         inset: 0;
         z-index: 15;
-        background: rgba(31, 30, 29, 0.25);
+        background: var(--q-backdrop);
       }
 
       .q-menu-btn { display: grid; }
@@ -751,6 +827,7 @@
         <div class="q-user">
           <span class="q-user-avatar" id="userAvatar"></span>
           <span class="q-user-email" id="userEmail"></span>
+          <button type="button" class="q-icon-btn q-theme-btn q-side-theme" id="sideThemeBtn" title="Switch light / dark mode" aria-label="Switch light or dark mode"><svg class="sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><svg class="moon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
           <button type="button" class="q-icon-btn" id="logoutBtn" title="Log out"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
         </div>
       </aside>
@@ -762,6 +839,7 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
           </button>
           <div class="q-title" id="chatTitle"></div>
+          <button type="button" class="q-icon-btn q-theme-btn" id="themeBtn" title="Switch light / dark mode" aria-label="Switch light or dark mode"><svg class="sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><svg class="moon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
           <button type="button" class="q-icon-btn q-top-new" id="topNewBtn" title="New chat"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
         </header>
 
@@ -2211,6 +2289,8 @@ Copy values exactly from the line and leave out any field that isn't on it. Date
       try { localStorage.setItem('koda-sidebar', hidden ? 'hidden' : 'shown'); } catch (e) {}
     }
     $('collapseBtn').addEventListener('click', () => setSidebarHidden(true));
+    $('themeBtn').addEventListener('click', () => kodaToggleTheme());
+    $('sideThemeBtn').addEventListener('click', () => kodaToggleTheme());
     $('menuBtn').addEventListener('click', () => {
       if (isPhone()) app.classList.toggle('drawer-open');
       else setSidebarHidden(false);
