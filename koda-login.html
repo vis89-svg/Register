@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://hirgkfhklwtbiajpxhaw.supabase.co; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+  <title>Koda - Sign in</title>
+  <link rel="icon" type="image/png" href="koda-logo.png">
+  <script src="koda-transition.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&display=swap">
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --card: #ffffff;
+      --border: #e5e2d8;
+      --input-border: #d6d2c4;
+      --input-bg: #ffffff;
+      --text: #1f1e1d;
+      --muted: #6f6c63;
+      --button: #1f1e1d;
+      --button-text: #ffffff;
+      --button-hover: #3d3b36;
+      --error: #b3261e;
+      --shadow: 0 4px 24px rgba(31, 30, 29, 0.06);
+      --serif: 'Source Serif 4', Georgia, serif;
+      --sans: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #000000;
+      --card: #121212;
+      --border: #262626;
+      --input-border: #333333;
+      --input-bg: #0a0a0a;
+      --text: #f2f0ea;
+      --muted: #9a978d;
+      --button: #f2f0ea;
+      --button-text: #121212;
+      --button-hover: #d9d6cc;
+      --error: #ff8a80;
+      --shadow: none;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      display: flex;
+      flex-direction: column;
+      transition: background 0.35s ease, color 0.35s ease;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 22px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--serif);
+      font-size: 1.4rem;
+      font-weight: 500;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .logo { width: 30px; height: 30px; object-fit: contain; }
+    :root[data-theme="dark"] .logo { filter: invert(1); }
+
+    .theme-toggle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+
+    .theme-toggle svg { grid-area: 1 / 1; transition: opacity 0.3s, transform 0.4s; }
+    .theme-toggle .moon { opacity: 0; transform: rotate(-90deg) scale(0.6); }
+    :root[data-theme="dark"] .theme-toggle .sun { opacity: 0; transform: rotate(90deg) scale(0.6); }
+    :root[data-theme="dark"] .theme-toggle .moon { opacity: 1; transform: none; }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 20px 64px;
+    }
+
+    .hero-logo { width: 56px; height: 56px; object-fit: contain; margin-bottom: 22px; }
+    :root[data-theme="dark"] .hero-logo { filter: invert(1); }
+
+    h1 {
+      font-family: var(--serif);
+      font-weight: 400;
+      font-size: clamp(2.2rem, 6vw, 3.2rem);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      text-align: center;
+    }
+
+    .subtitle {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 1rem;
+      text-align: center;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 400px;
+      margin-top: 32px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 28px 26px 24px;
+      transition: background 0.35s ease, border-color 0.35s ease;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 7px;
+    }
+
+    .field { margin-bottom: 16px; position: relative; }
+
+    input {
+      width: 100%;
+      height: 46px;
+      padding: 0 14px;
+      border: 1px solid var(--input-border);
+      border-radius: 12px;
+      background: var(--input-bg);
+      color: var(--text);
+      font: 400 0.98rem var(--sans);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    input:focus { border-color: var(--text); box-shadow: 0 0 0 3px rgba(127, 127, 127, 0.15); }
+    #password { padding-right: 46px; }
+
+    .peek {
+      position: absolute;
+      right: 6px;
+      bottom: 6px;
+      width: 34px;
+      height: 34px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+
+    .peek:hover { color: var(--text); }
+
+    .continue {
+      width: 100%;
+      height: 46px;
+      margin-top: 6px;
+      border: none;
+      border-radius: 12px;
+      background: var(--button);
+      color: var(--button-text);
+      font: 500 0.98rem var(--sans);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .continue:hover { background: var(--button-hover); }
+    .continue:disabled { opacity: 0.6; cursor: wait; }
+
+    .error {
+      min-height: 20px;
+      margin-top: 12px;
+      color: var(--error);
+      font-size: 0.85rem;
+      text-align: center;
+    }
+
+    /* Footer inside the login card */
+    .card-foot {
+      margin-top: 6px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      font-size: 0.88rem;
+      text-align: center;
+    }
+
+    .card-foot a.back { color: var(--text); text-decoration: none; }
+    .card-foot a.back span { color: #ffd400; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html" id="homeLink"><img class="logo" src="koda-logo.png" alt="">Koda</a>
+    <button class="theme-toggle" type="button" id="themeToggle" title="Switch light / dark mode" aria-label="Switch light or dark mode">
+      <svg class="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      <svg class="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </header>
+
+  <main>
+    <img class="hero-logo" src="koda-logo.png" alt="">
+    <h1>Your register,<br>answered.</h1>
+    <p class="subtitle">Sign in to ask Koda about your PAN entries.</p>
+
+    <form class="card" id="loginForm" novalidate>
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" autocomplete="email" placeholder="you@example.com" required>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" autocomplete="current-password" placeholder="Your password" required>
+        <button type="button" class="peek" id="peekBtn" title="Show password" aria-label="Show password">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <button type="submit" class="continue" id="continueBtn">Continue</button>
+      <p class="error" id="error" role="alert"></p>
+      <p class="card-foot"><a href="index.html" id="backLink" class="back">Back to <span>Website</span></a></p>
+    </form>
+
+  </main>
+
+  <script type="module">
+    import { supabase } from './supabase-config.js';
+
+    // Only allow going on to one of our own pages after signing in
+    const requested = new URLSearchParams(location.search).get('redirect') || '';
+    const target = /^[a-z-]+\.html$/.test(requested) ? requested : 'chat.html';
+    const CHAT_BG = '#f5f4ee';
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) location.replace(target);
+
+    const form = document.getElementById('loginForm');
+    const email = document.getElementById('email');
+    const password = document.getElementById('password');
+    const button = document.getElementById('continueBtn');
+    const error = document.getElementById('error');
+
+    document.getElementById('themeToggle').addEventListener('click', kodaToggleTheme);
+
+    document.getElementById('peekBtn').addEventListener('click', () => {
+      password.type = password.type === 'password' ? 'text' : 'password';
+      password.focus();
+    });
+
+    // Links leave with the same transition as the welcome page
+    const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
+    [['homeLink', () => isDark() ? '#000000' : '#ffffff'], ['backLink', () => isDark() ? '#000000' : '#ffffff']]
+      .forEach(([id, color]) => {
+        const link = document.getElementById(id);
+        link.addEventListener('click', (e) => {
+          if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+          e.preventDefault();
+          kodaGo(link.getAttribute('href'), link, color());
+        });
+      });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      error.textContent = '';
+      if (!email.value.trim() || !password.value) {
+        error.textContent = 'Please enter your email and password.';
+        return;
+      }
+
+      button.disabled = true;
+      button.textContent = 'Signing in…';
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.value.trim(),
+        password: password.value
+      });
+
+      if (signInError || !data.session) {
+        button.disabled = false;
+        button.textContent = 'Continue';
+        error.textContent = signInError && /invalid/i.test(signInError.message)
+          ? 'That email and password don\'t match. Please try again.'
+          : 'Couldn\'t sign in: ' + (signInError ? signInError.message : 'please try again.');
+        return;
+      }
+
+      button.textContent = 'Welcome';
+      kodaGo(target, button, CHAT_BG);
+    });
+
+    email.focus();
+  </script>
+</body>
+</html>

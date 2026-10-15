@@ -7,6 +7,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; connect-src 'self' https://hirgkfhklwtbiajpxhaw.supabase.co; img-src 'self' data: blob:; worker-src 'self' blob:; font-src 'self' data: https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
   <title>Koda - PAN Sorter</title>
   <link rel="icon" type="image/png" href="koda-logo.png">
+  <script src="koda-transition.js"></script>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
   <style>
@@ -32,8 +33,8 @@
     html, body.qoda { height: 100%; }
 
     body.qoda {
-      background: var(--q-page);
-      padding: 1rem;
+      background: var(--q-bg);
+      padding: 0;
       min-height: 0;
       overflow: hidden;
       color: var(--q-text);
@@ -41,46 +42,73 @@
 
     body.qoda #authGuard {
       height: 100%;
+      height: 100dvh;
       flex-direction: column;
     }
 
-    body.qoda .nav { margin-bottom: 1rem; flex-shrink: 0; }
-
+    /* Full window, like a desktop app */
     .q-app {
       flex: 1;
       min-height: 0;
       width: 100%;
-      max-width: 1280px;
-      margin: 0 auto;
       display: flex;
       background: var(--q-bg);
-      border: 1px solid var(--q-border);
-      border-radius: 16px;
       overflow: hidden;
       position: relative;
     }
 
     /* Sidebar */
     .q-sidebar {
-      width: 260px;
+      width: 288px;
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
       background: var(--q-sidebar);
       border-right: 1px solid var(--q-border);
-      padding: 14px 10px 10px;
+      padding: 12px 10px 10px;
+      transition: margin-left 0.25s ease;
+    }
+
+    .q-app.collapsed .q-sidebar { margin-left: -289px; }
+
+    .q-side-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 0 10px;
     }
 
     .q-brand {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 4px 8px 14px;
+      padding: 4px 8px;
       font-family: var(--q-serif);
       font-size: 1.35rem;
       font-weight: 600;
       letter-spacing: -0.01em;
     }
+
+    .q-side-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      margin-top: 4px;
+    }
+
+    .q-side-nav a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 8px;
+      border-radius: 8px;
+      color: #3d3b36;
+      text-decoration: none;
+      font: 400 0.9rem var(--q-sans);
+    }
+
+    .q-side-nav a:hover { background: var(--q-hover); }
+    .q-side-nav svg { color: var(--q-muted); flex-shrink: 0; }
 
     .q-logo {
       width: 30px;
@@ -191,7 +219,9 @@
       flex-shrink: 0;
     }
 
-    .q-user-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .q-user-email { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .q-user .q-icon-btn { width: 30px; height: 30px; }
+    .q-user .q-icon-btn:hover { color: #a3392a; }
 
     /* Main column */
     .q-main {
@@ -235,7 +265,8 @@
     }
 
     .q-icon-btn:hover { background: var(--q-hover); color: var(--q-text); }
-    .q-menu-btn { display: none; }
+    .q-menu-btn, .q-top-new { display: none; }
+    .q-app.collapsed .q-menu-btn { display: grid; }
 
     .q-scroller {
       flex: 1;
@@ -648,21 +679,30 @@
 
     .q-backdrop { display: none; }
 
-    /* Phones and small tablets: sidebar becomes a drawer */
+    /* Phones and small tablets: full screen, sidebar becomes a drawer */
     @media (max-width: 820px) {
-      body.qoda { padding: 0.75rem; }
-      .q-app { border-radius: 12px; }
-
-      .q-sidebar {
+      .q-sidebar,
+      .q-app.collapsed .q-sidebar {
         position: absolute;
         top: 0;
         bottom: 0;
         left: 0;
         z-index: 20;
+        width: min(300px, 86vw);
+        margin-left: 0;
         transform: translateX(-105%);
-        transition: transform 0.2s ease;
+        transition: transform 0.22s ease;
         box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08);
       }
+
+      .q-collapse-btn { display: none; }
+      .q-top-new { display: grid; }
+      .q-topbar { height: 50px; padding: 0 8px; border-bottom: 1px solid var(--q-border); }
+      .q-main.empty .q-topbar { border-bottom: none; }
+      .q-title { text-align: center; }
+      .q-main.empty .q-welcome { padding: 0 20px 22px; }
+      .q-suggestions { margin-top: 12px; }
+      .q-chip { padding: 7px 11px; font-size: 0.82rem; }
 
       .q-app.drawer-open .q-sidebar { transform: none; }
 
@@ -689,64 +729,29 @@
 <body class="qoda">
 
   <div id="authGuard" style="display: none;">
-    <nav class="nav">
-      <div class="nav-links">
-        <a href="quick-entry.html">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-          </svg>
-          Quick Entry
-        </a>
-        <a href="index.html">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-            <polyline points="10 9 9 9 8 9"/>
-          </svg>
-          Full Entry
-        </a>
-        <a href="display.html">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 3v18h18"/>
-            <path d="M7 16v-3"/>
-            <path d="M12 16v-7"/>
-            <path d="M17 16V8"/>
-          </svg>
-          Display
-        </a>
-        <a href="chat.html" class="active">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-          Koda
-        </a>
-      </div>
-      <button class="nav-logout" id="logoutBtn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-          <polyline points="16 17 21 12 16 7"/>
-          <line x1="21" y1="12" x2="9" y2="12"/>
-        </svg>
-        Logout
-      </button>
-    </nav>
-
     <div class="q-app" id="app">
       <aside class="q-sidebar">
-        <div class="q-brand"><img class="q-logo" src="koda-logo.png" alt="">Koda</div>
+        <div class="q-side-head">
+          <div class="q-brand"><img class="q-logo" src="koda-logo.png" alt="">Koda</div>
+          <button type="button" class="q-icon-btn q-collapse-btn" id="collapseBtn" title="Hide sidebar"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg></button>
+        </div>
         <button type="button" id="newChatBtn" class="q-new">
           <span class="q-new-icon">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </span>
           New chat
         </button>
+        <nav class="q-side-nav">
+          <a href="quick-entry.html"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Quick Entry</a>
+          <a href="full-entry.html"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Full Entry</a>
+          <a href="display.html"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16v-3"/><path d="M12 16v-7"/><path d="M17 16V8"/></svg>Display</a>
+        </nav>
         <div class="q-recents-label">Recents</div>
         <div id="chatList" class="q-list"></div>
         <div class="q-user">
           <span class="q-user-avatar" id="userAvatar"></span>
           <span class="q-user-email" id="userEmail"></span>
+          <button type="button" class="q-icon-btn" id="logoutBtn" title="Log out"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
         </div>
       </aside>
       <div class="q-backdrop" id="backdrop"></div>
@@ -757,6 +762,7 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
           </button>
           <div class="q-title" id="chatTitle"></div>
+          <button type="button" class="q-icon-btn q-top-new" id="topNewBtn" title="New chat"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
         </header>
 
         <div class="q-scroller" id="scroller">
@@ -802,7 +808,7 @@
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      window.location.href = 'login.html?redirect=chat.html';
+      window.location.href = 'koda-login.html?redirect=chat.html';
     } else {
       document.getElementById('authGuard').style.display = 'flex';
     }
@@ -2196,13 +2202,27 @@ Copy values exactly from the line and leave out any field that isn't on it. Date
       sendMessage();
     });
 
-    $('newChatBtn').addEventListener('click', () => { openChat(null); app.classList.remove('drawer-open'); });
-    $('menuBtn').addEventListener('click', () => app.classList.toggle('drawer-open'));
+    const isPhone = () => window.matchMedia('(max-width: 820px)').matches;
+    const startNewChat = () => { openChat(null); app.classList.remove('drawer-open'); };
+    $('newChatBtn').addEventListener('click', startNewChat);
+    $('topNewBtn').addEventListener('click', startNewChat);
+
+    // Desktop: hide/show the sidebar (remembered). Phone: slide-out drawer.
+    try { if (localStorage.getItem('koda-sidebar') === 'hidden') app.classList.add('collapsed'); } catch (e) {}
+    function setSidebarHidden(hidden) {
+      app.classList.toggle('collapsed', hidden);
+      try { localStorage.setItem('koda-sidebar', hidden ? 'hidden' : 'shown'); } catch (e) {}
+    }
+    $('collapseBtn').addEventListener('click', () => setSidebarHidden(true));
+    $('menuBtn').addEventListener('click', () => {
+      if (isPhone()) app.classList.toggle('drawer-open');
+      else setSidebarHidden(false);
+    });
     $('backdrop').addEventListener('click', () => app.classList.remove('drawer-open'));
 
     document.getElementById('logoutBtn').addEventListener('click', async function () {
       await supabase.auth.signOut();
-      window.location.href = 'login.html';
+      window.location.href = 'koda-login.html';
     });
 
     // ---- Start ----

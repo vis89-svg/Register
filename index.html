@@ -4,520 +4,312 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; connect-src 'self' https://hirgkfhklwtbiajpxhaw.supabase.co; img-src 'self' data:; font-src 'self' data: https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
-  <title>PAN Sorter - Entry</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+  <title>Koda - Everything you want answered</title>
+  <link rel="icon" type="image/png" href="koda-logo.png">
+  <script src="koda-transition.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #0b0b0b;
+      --muted: #8a8a8a;
+      --neon: #ffd400;
+      --toggle-border: #e4e4e4;
+      --ring-opacity: 0.22;
+      --ring-glow: none;
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #000000;
+      --text: #f5f5f5;
+      --muted: #7a7a7a;
+      --neon: #ffd400;
+      --toggle-border: #262626;
+      --ring-opacity: 0.45;
+      --ring-glow: none;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      transition: background 0.35s ease, color 0.35s ease;
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid var(--toggle-border);
+      background: transparent;
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: border-color 0.35s, transform 0.2s;
+      z-index: 10;
+    }
+
+    .theme-toggle:hover { transform: rotate(20deg); }
+    .theme-toggle svg { grid-area: 1 / 1; transition: opacity 0.3s, transform 0.4s; }
+    .theme-toggle .moon { opacity: 0; transform: rotate(-90deg) scale(0.6); }
+    :root[data-theme="dark"] .theme-toggle .sun { opacity: 0; transform: rotate(90deg) scale(0.6); }
+    :root[data-theme="dark"] .theme-toggle .moon { opacity: 1; transform: none; }
+
+    /* Background: neon rings rippling out from the middle, forever */
+    .rings {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .rings span {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 130vmax;
+      height: 130vmax;
+      margin: -65vmax 0 0 -65vmax;
+      border-radius: 50%;
+      border: 1.5px solid var(--neon);
+      box-shadow: var(--ring-glow);
+      opacity: 0;
+      transform: scale(0.04);
+      animation: ripple 12s linear infinite;
+    }
+
+    .rings span:nth-child(2) { animation-delay: -3s; }
+    .rings span:nth-child(3) { animation-delay: -6s; }
+    .rings span:nth-child(4) { animation-delay: -9s; }
+
+    @keyframes ripple {
+      0% { transform: scale(0.04); opacity: 0; }
+      12% { opacity: var(--ring-opacity); }
+      100% { transform: scale(1); opacity: 0; }
+    }
+
+    .k-leaving .rings { opacity: 0; }
+
+    .hero {
+      position: relative;
+      z-index: 1;
+      padding: 0 8vw;
+      font-weight: 700;
+      font-size: clamp(2.6rem, 8.5vw, 7rem);
+      line-height: 1.02;
+      letter-spacing: -0.035em;
+    }
+
+    .line {
+      display: block;
+      animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+      animation-delay: calc(var(--i) * 110ms + 100ms);
+    }
+
+    .line.half { display: inline-block; }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(40px); filter: blur(10px); }
+      to { opacity: 1; transform: none; filter: none; }
+    }
+
+    .plain, .tag {
+      display: inline-block;
+      transition: opacity 0.45s ease, transform 0.55s cubic-bezier(0.6, 0, 0.3, 1), filter 0.45s ease, text-shadow 0.3s ease;
+    }
+
+    .tag {
+      position: relative;
+      color: var(--neon);
+      text-decoration: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* The # draws itself stroke by stroke, then the word slides out from behind it */
+    .hash {
+      display: inline-block;
+      width: 0.62em;
+      height: 0.72em;
+      margin-right: 0.03em;
+      vertical-align: -0.02em;
+      overflow: visible;
+    }
+
+    .hash line {
+      stroke: currentColor;
+      stroke-width: 12;
+      stroke-linecap: square;
+      stroke-dasharray: 1;
+      stroke-dashoffset: 0;
+    }
+
+    .tag.draw .hash line {
+      stroke-dashoffset: 1;
+      animation: draw-stroke 0.32s cubic-bezier(0.6, 0, 0.3, 1) forwards;
+      animation-delay: calc(var(--base, 0s) + var(--n) * 0.14s);
+    }
+
+    @keyframes draw-stroke { to { stroke-dashoffset: 0; } }
+
+    /* #Koda: the # keeps writing itself - draw, hold, wipe away, draw again */
+    .tag.loop .hash line {
+      animation: hash-loop 3.4s cubic-bezier(0.6, 0, 0.3, 1) infinite both;
+      animation-delay: calc(var(--base) + var(--n) * 0.14s);
+    }
+
+    @keyframes hash-loop {
+      0% { stroke-dashoffset: 1; }
+      13% { stroke-dashoffset: 0; }
+      74% { stroke-dashoffset: 0; }
+      88% { stroke-dashoffset: -1; }
+      100% { stroke-dashoffset: -1; }
+    }
+
+    .word { display: inline-block; }
+
+    .tag.intro .word {
+      clip-path: inset(0 100% 0 0);
+      transform: translateX(-0.35em);
+      animation: word-out 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+      animation-delay: calc(var(--base) + 0.6s);
+    }
+
+    @keyframes word-out { to { clip-path: inset(0 0 0 0); transform: none; } }
+
+    /* Underline: always on #Koda (drawn after the word appears), on hover for #GoWebsite */
+    .tag::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -0.06em;
+      height: 0.075em;
+      background: currentColor;
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.35s cubic-bezier(0.6, 0, 0.3, 1);
+    }
+
+    /* #Koda's underline writes and wipes in step with its #, just behind it */
+    .tag.koda::after {
+      animation: underline-loop 3.4s cubic-bezier(0.6, 0, 0.3, 1) infinite both;
+      animation-delay: calc(var(--base) + 0.75s);
+    }
+
+    .tag:hover::after { transform: scaleX(1); }
+
+    @keyframes underline-loop {
+      0% { transform: scaleX(0); transform-origin: left; }
+      13% { transform: scaleX(1); transform-origin: left; }
+      74% { transform: scaleX(1); transform-origin: right; }
+      88% { transform: scaleX(0); transform-origin: right; }
+      100% { transform: scaleX(0); transform-origin: right; }
+    }
+    .tag:focus-visible { outline: 3px solid var(--neon); outline-offset: 6px; border-radius: 6px; }
+
+    /* Leaving: everything except the clicked tag floats up and blurs away, one after another */
+    .k-leaving .plain, .k-leaving .tag:not(.k-chosen) {
+      opacity: 0;
+      transform: translateY(-28px);
+      filter: blur(12px);
+      transition-delay: calc(var(--i) * 70ms);
+    }
+
+    .k-leaving .tag.k-chosen {
+      transform: scale(1.08);
+      color: var(--neon);
+    }
+
+    /* As the neon ring sweeps out, the chosen tag dissolves into it */
+    .k-wiping .tag.k-chosen {
+      opacity: 0;
+      transform: scale(1.3);
+      filter: blur(8px);
+      transition-duration: 0.4s;
+    }
+
+    .k-leaving .theme-toggle { opacity: 0; transition: opacity 0.3s; }
+
+    /* Phones: bigger text spread over the whole screen */
+    @media (max-width: 640px) {
+      body { align-items: stretch; justify-content: stretch; }
+
+      .hero {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 18px 20px 18px;
+        font-size: 15vw;
+        line-height: 1;
+      }
+
+      .line.half { display: block; }
+      .theme-toggle { top: 14px; right: 14px; width: 42px; height: 42px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .line { animation: none; }
+      .tag.draw .hash line, .tag.loop .hash line, .tag.intro .word { animation: none; stroke-dashoffset: 0; clip-path: none; transform: none; }
+      .tag.koda::after { animation: none; transform: scaleX(1); }
+      .rings { display: none; }
+    }
+  </style>
 </head>
 <body>
+  <button class="theme-toggle" type="button" id="themeToggle" title="Switch light / dark mode" aria-label="Switch light or dark mode">
+    <svg class="sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+    <svg class="moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
 
-  <div id="authGuard" style="display: none;">
-    <nav class="nav">
-      <div class="nav-links">
-        <a href="quick-entry.html">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-          </svg>
-          Quick Entry
-        </a>
-        <a href="index.html" class="active">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-            <polyline points="10 9 9 9 8 9"/>
-          </svg>
-          Full Entry
-        </a>
-        <a href="display.html">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 3v18h18"/>
-            <path d="M7 16v-3"/>
-            <path d="M12 16v-7"/>
-            <path d="M17 16V8"/>
-          </svg>
-          Display
-        </a>
-        <a href="chat.html">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-          Koda
-        </a>
-      </div>
-      <button class="nav-logout" id="logoutBtn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-          <polyline points="16 17 21 12 16 7"/>
-          <line x1="21" y1="12" x2="9" y2="12"/>
-        </svg>
-        Logout
-      </button>
-    </nav>
+  <div class="rings" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
 
-    <div class="container">
-      <div class="card">
-        <h1 class="card-title">
-          <span class="icon-container">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <path d="m12 18 4-4"/>
-              <path d="m9 15 3 3-3 3-3-3z"/>
-            </svg>
-          </span>
-          <span class="title-group">
-            <span class="title-main">Full Entry</span>
-            <span class="title-sub">Enter PAN details below</span>
-          </span>
-        </h1>
+  <main class="hero">
+    <span class="line" style="--i: 0"><span class="plain" style="--i: 0">Everything</span></span>
+    <span class="line half" style="--i: 1"><span class="plain" style="--i: 1">you want</span></span>
+    <span class="line half" style="--i: 2"><span class="plain" style="--i: 2">answered</span></span>
+    <span class="line" style="--i: 3"><span class="plain" style="--i: 3">is on&nbsp;</span><a class="tag koda loop intro" href="koda-login.html" aria-label="#Koda" style="--i: 4; --base: 0.75s" data-wipe-light="#faf9f5" data-wipe-dark="#000000"><svg class="hash" viewBox="0 0 100 100" aria-hidden="true"><line pathLength="1" style="--n: 0" x1="40" y1="6" x2="30" y2="94"/><line pathLength="1" style="--n: 1" x1="74" y1="6" x2="64" y2="94"/><line pathLength="1" style="--n: 2" x1="10" y1="33" x2="94" y2="33"/><line pathLength="1" style="--n: 3" x1="6" y1="67" x2="90" y2="67"/></svg><span class="word">Koda</span></a></span>
+    <span class="line" style="--i: 4"><a class="tag draw intro" href="login.html" aria-label="#GoWebsite" style="--i: 5; --base: 1.05s" data-wipe-light="#eef2ff" data-wipe-dark="#eef2ff"><svg class="hash" viewBox="0 0 100 100" aria-hidden="true"><line pathLength="1" style="--n: 0" x1="40" y1="6" x2="30" y2="94"/><line pathLength="1" style="--n: 1" x1="74" y1="6" x2="64" y2="94"/><line pathLength="1" style="--n: 2" x1="10" y1="33" x2="94" y2="33"/><line pathLength="1" style="--n: 3" x1="6" y1="67" x2="90" y2="67"/></svg><span class="word">GoWebsite</span></a></span>
+  </main>
 
-        <form id="entryForm">
-          <div class="form-row">
-            <div class="form-group autocomplete-group">
-              <label for="panNumber">PAN Number</label>
-              <div class="input-icon-wrapper">
-                <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                  <line x1="1" y1="10" x2="23" y2="10"/>
-                </svg>
-                <input type="text" id="panNumber" placeholder="ABCDE1234F" maxlength="10" required autocomplete="off">
-              </div>
-              <div id="panDropdown" class="autocomplete-dropdown"></div>
-            </div>
-            <div class="form-group">
-              <label for="name">Organization / Individual Name</label>
-              <div class="input-icon-wrapper">
-                <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
-                  <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
-                  <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/>
-                  <path d="M10 6h4"/>
-                  <path d="M10 10h4"/>
-                  <path d="M10 14h4"/>
-                  <path d="M10 18h4"/>
-                </svg>
-                <input type="text" id="name" placeholder="Full name or organization" required>
-              </div>
-            </div>
-          </div>
+  <script>
+    document.getElementById('themeToggle').addEventListener('click', kodaToggleTheme);
 
-          <div class="form-row">
-            <div class="form-group">
-              <label for="date">Date of Entry</label>
-              <div class="input-icon-wrapper">
-                <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M8 2v4"/>
-                  <path d="M16 2v4"/>
-                  <rect x="3" y="4" width="18" height="18" rx="2"/>
-                  <path d="M3 10h18"/>
-                  <path d="M8 14h.01"/>
-                  <path d="M12 14h.01"/>
-                  <path d="M16 14h.01"/>
-                  <path d="M8 18h.01"/>
-                  <path d="M12 18h.01"/>
-                  <path d="M16 18h.01"/>
-                </svg>
-                <input type="text" id="date" placeholder="16/07/2026" required>
-                <button type="button" id="dateToggle" class="input-icon-right" aria-label="Toggle calendar">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="6 9 12 15 18 9"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="amount">Amount (₹)</label>
-              <div class="input-icon-wrapper">
-                <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <path d="M8 8h8"/>
-                  <path d="M8 14h5"/>
-                  <path d="M11 8v8"/>
-                </svg>
-                <input type="text" id="amount" placeholder="0.00" inputmode="numeric" required>
-              </div>
-              <span class="field-hint">Amount in INR (₹)</span>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="taxAmount">Tax (₹)</label>
-              <div class="input-icon-wrapper">
-                <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/>
-                  <path d="M8 7h8"/>
-                  <path d="M8 11h5"/>
-                  <path d="M8 15h2"/>
-                </svg>
-                <input type="text" id="taxAmount" placeholder="0.00" inputmode="numeric" required>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="deductionPercent">Deduction (%)</label>
-              <div class="input-icon-wrapper">
-                <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <path d="m15 9-6 6"/>
-                  <path d="M9.5 9.5h.01"/>
-                  <path d="M14.5 14.5h.01"/>
-                </svg>
-                <input type="number" id="deductionPercent" placeholder="0" min="0" max="100" step="0.01" required>
-              </div>
-              <span class="field-hint">Percentage value (%)</span>
-            </div>
-          </div>
-
-          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 1.25rem 0 0.75rem;">
-
-          <button type="submit" class="btn btn-primary" id="submitBtn" style="margin-top: 0.5rem; min-width: 180px;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-              <polyline points="17 21 17 13 7 13 7 21"/>
-              <polyline points="7 3 7 8 15 8"/>
-            </svg>
-            Submit Entry
-          </button>
-        </form>
-      </div>
-    </div>
-
-    <div id="toast" class="toast"></div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-  <script type="module">
-    import { supabase } from './supabase-config.js';
-
-    // Auth guard
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      window.location.href = 'login.html?redirect=index.html';
-    }
-
-    const form = document.getElementById('entryForm');
-    const submitBtn = document.getElementById('submitBtn');
-    const toast = document.getElementById('toast');
-
-    document.getElementById('authGuard').style.display = 'block';
-    let datePicker = flatpickr('#date', {
-      dateFormat: 'd/m/Y',
-      allowInput: true,
-      disableMobile: true
-    });
-
-    document.getElementById('dateToggle').addEventListener('mousedown', function (e) {
-      e.preventDefault();
-    });
-    document.getElementById('dateToggle').addEventListener('click', function () {
-      datePicker.toggle();
-    });
-
-    const amountInput = document.getElementById('amount');
-    amountInput.addEventListener('input', function () {
-      let cursorPos = this.selectionStart;
-      let val = this.value;
-      let digitsBefore = val.slice(0, cursorPos).replace(/\D/g, '').length;
-
-      let cleaned = val.replace(/[^\d.]/g, '');
-      let parts = cleaned.split('.');
-      if (parts.length > 2) { parts = [parts[0], parts.slice(1).join('')]; }
-
-      let intPart = parts[0].replace(/^0+(\d)/, '$1');
-      if (intPart === '') intPart = '0';
-      let decPart = parts.length > 1 ? '.' + parts[1].slice(0, 2) : '';
-
-      if (intPart.length > 3) {
-        let last3 = intPart.slice(-3);
-        let rest = intPart.slice(0, -3);
-        rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
-        intPart = rest + ',' + last3;
-      }
-
-      let formatted = intPart + decPart;
-      let digitCount = 0, newPos = 0;
-      for (let i = 0; i < formatted.length; i++) {
-        if (formatted[i] >= '0' && formatted[i] <= '9') {
-          digitCount++;
-          if (digitCount === digitsBefore) { newPos = i + 1; break; }
-        }
-      }
-      if (digitCount < digitsBefore || newPos === 0) newPos = formatted.length;
-
-      this.value = formatted;
-      this.setSelectionRange(newPos, newPos);
-    });
-
-    const taxInput = document.getElementById('taxAmount');
-    taxInput.addEventListener('input', function () {
-      let cursorPos = this.selectionStart;
-      let val = this.value;
-      let digitsBefore = val.slice(0, cursorPos).replace(/\D/g, '').length;
-
-      let cleaned = val.replace(/[^\d.]/g, '');
-      let parts = cleaned.split('.');
-      if (parts.length > 2) { parts = [parts[0], parts.slice(1).join('')]; }
-
-      let intPart = parts[0].replace(/^0+(\d)/, '$1');
-      if (intPart === '') intPart = '0';
-      let decPart = parts.length > 1 ? '.' + parts[1].slice(0, 2) : '';
-
-      if (intPart.length > 3) {
-        let last3 = intPart.slice(-3);
-        let rest = intPart.slice(0, -3);
-        rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
-        intPart = rest + ',' + last3;
-      }
-
-      let formatted = intPart + decPart;
-      let digitCount = 0, newPos = 0;
-      for (let i = 0; i < formatted.length; i++) {
-        if (formatted[i] >= '0' && formatted[i] <= '9') {
-          digitCount++;
-          if (digitCount === digitsBefore) { newPos = i + 1; break; }
-        }
-      }
-      if (digitCount < digitsBefore || newPos === 0) newPos = formatted.length;
-
-      this.value = formatted;
-      this.setSelectionRange(newPos, newPos);
-    });
-
-    const panInput = document.getElementById('panNumber');
-    const nameInput = document.getElementById('name');
-    const panDropdown = document.getElementById('panDropdown');
-
-    let debounceTimer;
-    let selectedFromDropdown = false;
-    const nameCache = {};
-
-    function cacheEntry(pan, name) {
-      nameCache[pan.toUpperCase()] = name;
-    }
-
-    async function fetchSuggestions(text) {
-      const { data } = await supabase
-        .from('entries')
-        .select('pan_number, name')
-        .ilike('pan_number', `%${text}%`)
-        .order('pan_number', { ascending: true })
-        .limit(10);
-
-      const items = data || [];
-      items.forEach(function (item) {
-        cacheEntry(item.pan_number, item.name);
+    document.querySelectorAll('.tag').forEach(function (tag) {
+      // After the intro, hovering #GoWebsite redraws its # (#Koda's # loops on its own)
+      setTimeout(function () { tag.classList.remove('intro'); }, 2600);
+      tag.addEventListener('mouseenter', function () {
+        if (tag.classList.contains('loop') || tag.classList.contains('intro') || document.documentElement.classList.contains('k-leaving')) return;
+        tag.classList.remove('draw');
+        tag.style.setProperty('--base', '0s');
+        void tag.offsetWidth;
+        tag.classList.add('draw');
       });
 
-      return items;
-    }
-
-    function renderDropdown(items) {
-      if (items.length === 0) {
-        panDropdown.classList.remove('show');
-        return;
-      }
-
-      let html = '';
-      items.forEach(function (item) {
-        cacheEntry(item.pan_number, item.name);
-        html += '<div class="dropdown-item" data-pan="' + item.pan_number + '" data-name="' + escapeHtml(item.name) + '">';
-        html += '<span class="dropdown-pan">' + item.pan_number + '</span>';
-        html += '<span class="dropdown-name">' + escapeHtml(item.name) + '</span>';
-        html += '</div>';
+      tag.addEventListener('click', function (e) {
+        // Ctrl/Cmd-click or middle-click still opens a new tab normally
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+        e.preventDefault();
+        var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        kodaGo(tag.getAttribute('href'), tag, dark ? tag.dataset.wipeDark : tag.dataset.wipeLight);
       });
-
-      panDropdown.innerHTML = html;
-      panDropdown.classList.add('show');
-    }
-
-    panInput.addEventListener('input', function () {
-      clearTimeout(debounceTimer);
-      selectedFromDropdown = false;
-
-      const text = panInput.value.trim().toUpperCase();
-      panInput.value = text;
-
-      if (!text) {
-        panDropdown.classList.remove('show');
-        return;
-      }
-
-      debounceTimer = setTimeout(async function () {
-        const items = await fetchSuggestions(text);
-        renderDropdown(items);
-      }, 200);
-    });
-
-    panDropdown.addEventListener('mousedown', function (e) {
-      const item = e.target.closest('.dropdown-item');
-      if (!item) return;
-
-      e.preventDefault();
-
-      selectedFromDropdown = true;
-      panInput.value = item.dataset.pan;
-      nameInput.value = item.dataset.name;
-      panDropdown.classList.remove('show');
-
-      nameInput.focus();
-    });
-
-    panInput.addEventListener('blur', function () {
-      setTimeout(function () {
-        panDropdown.classList.remove('show');
-      }, 200);
-
-      if (selectedFromDropdown) return;
-
-      const pan = panInput.value.trim().toUpperCase();
-      if (!pan) return;
-
-      panInput.value = pan;
-
-      if (!isValidPAN(pan)) return;
-
-      if (nameCache[pan]) {
-        nameInput.value = nameCache[pan];
-        return;
-      }
-
-      supabase
-        .from('entries')
-        .select('name')
-        .eq('pan_number', pan)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .then(function ({ data }) {
-          if (data && data.length > 0) {
-            const fetchedName = data[0].name;
-            nameInput.value = fetchedName;
-            cacheEntry(pan, fetchedName);
-          }
-        });
-    });
-
-    panInput.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') {
-        panDropdown.classList.remove('show');
-      }
-    });
-
-    document.addEventListener('click', function (e) {
-      if (!e.target.closest('.autocomplete-group')) {
-        panDropdown.classList.remove('show');
-      }
-    });
-
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-
-    function showToast(message, type) {
-      toast.textContent = message;
-      toast.className = 'toast ' + type + ' show';
-      setTimeout(function () {
-        toast.classList.remove('show');
-      }, 3000);
-    }
-
-    function setLoading(isLoading) {
-      if (isLoading) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner"></span> Submitting...';
-      } else {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = 'Submit Entry';
-      }
-    }
-
-    function isValidPAN(pan) {
-      return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan.toUpperCase());
-    }
-
-    form.addEventListener('submit', async function (e) {
-      e.preventDefault();
-
-      const pan = document.getElementById('panNumber').value.trim().toUpperCase();
-      const name = document.getElementById('name').value.trim();
-      const date = document.getElementById('date').value;
-      const dateParts = date.split('/');
-      const dbDate = dateParts.length === 3 ? dateParts[2] + '-' + dateParts[1] + '-' + dateParts[0] : date;
-      const amount = parseFloat(document.getElementById('amount').value.replace(/,/g, ''));
-      const taxAmount = parseFloat(document.getElementById('taxAmount').value.replace(/,/g, ''));
-      const deductionPercent = parseFloat(document.getElementById('deductionPercent').value);
-
-      if (!isValidPAN(pan)) {
-        showToast('Invalid PAN format. Expected: 5 letters + 4 digits + 1 letter (e.g. ABCDE1234F)', 'error');
-        return;
-      }
-
-      if (!name) {
-        showToast('Please enter a name.', 'error');
-        return;
-      }
-
-      if (!date) {
-        showToast('Please select a date.', 'error');
-        return;
-      }
-
-      if (isNaN(amount) || amount < 0) {
-        showToast('Please enter a valid amount.', 'error');
-        return;
-      }
-
-      if (isNaN(taxAmount) || taxAmount < 0) {
-        showToast('Please enter a valid tax amount.', 'error');
-        return;
-      }
-
-      if (isNaN(deductionPercent) || deductionPercent < 0 || deductionPercent > 100) {
-        showToast('Deduction % must be between 0 and 100.', 'error');
-        return;
-      }
-
-      setLoading(true);
-
-      const { data: skeletons } = await supabase
-        .from('entries')
-        .select('id')
-        .is('date', null)
-        .eq('pan_number', pan)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      let error;
-      if (skeletons && skeletons.length > 0) {
-        ({ error } = await supabase
-          .from('entries')
-          .update({ date: dbDate, amount: amount, tax_amount: taxAmount, deduction_percentage: deductionPercent })
-          .eq('id', skeletons[0].id));
-      } else {
-        ({ error } = await supabase
-          .from('entries')
-          .insert({ pan_number: pan, name: name, date: dbDate, amount: amount, tax_amount: taxAmount, deduction_percentage: deductionPercent }));
-      }
-
-      setLoading(false);
-
-      if (error) {
-        console.error('Error adding entry:', error);
-        showToast('Failed to save: ' + error.message, 'error');
-      } else {
-        cacheEntry(pan, name);
-        showToast('Entry saved successfully!', 'success');
-        form.reset();
-        datePicker.setDate(new Date());
-      }
-    });
-
-    document.getElementById('logoutBtn').addEventListener('click', async function () {
-      await supabase.auth.signOut();
-      window.location.href = 'login.html';
     });
   </script>
 </body>
