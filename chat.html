@@ -1047,9 +1047,10 @@
       });
     }
 
-    // ---- Saved chats (kept in this browser, separately for each user) ----
+    // ---- Saved chats: kept in your Supabase account (table koda_chats), so they follow you to any device ----
+    // Older versions kept chats in this browser only; those are uploaded once and then removed from the browser.
     const userId = session?.user?.id || 'anon';
-    const CHATS_KEY = 'pansorter_chats_' + userId;
+    const LOCAL_CHATS_KEY = 'pansorter_chats_' + userId;
 
     // Older chats stored plain text; convert them to the block format
     function normalizeMessage(m) {
@@ -1062,33 +1063,114 @@
       return m.action ? { role: 'assistant', blocks, action: m.action } : { role: 'assistant', blocks };
     }
 
-    function loadChats() {
+    function readLocalChats() {
       try {
-        const list = JSON.parse(localStorage.getItem(CHATS_KEY) || '[]');
+        const list = JSON.parse(localStorage.getItem(LOCAL_CHATS_KEY) || '[]');
         if (!Array.isArray(list)) return [];
         list.forEach(c => { c.messages = (c.messages || []).map(normalizeMessage); });
-        return list;
+        return list.filter(c => c && c.id && c.messages.length);
       } catch (e) {
         return [];
       }
     }
 
-    let chats = loadChats();      // [{ id, title, updatedAt, messages }], newest first
-    let activeId = null;          // null = a new chat that has no messages yet
-    let busy = false;
-    let pendingFile = null;
-
-    function saveChats() {
-      // If storage is full, drop the oldest chats until it fits
+    // Fallback when the account copy can't be reached: keep chats in this browser like before
+    function writeLocalChats() {
       while (true) {
         try {
-          localStorage.setItem(CHATS_KEY, JSON.stringify(chats));
+          localStorage.setItem(LOCAL_CHATS_KEY, JSON.stringify(chats));
           return;
         } catch (e) {
           if (chats.length <= 1) return;
           chats.pop();
         }
       }
+    }
+
+    let chats = [];               // [{ id, title, updatedAt, messages }], newest first
+    let chatsLoading = true;
+    let activeId = null;          // null = a new chat that has no messages yet
+    let busy = false;
+    let pendingFile = null;
+
+    let inAccount = false;        // true once chats load from the account
+    const savedCopy = new Map();  // chat id -> what was last saved, so only changed chats are uploaded
+    const snapshot = (c) => JSON.stringify([c.title, c.messages]);
+    const fromRow = (r) => ({ id: r.id, title: r.title, updatedAt: Date.parse(r.updated_at) || Date.now(), messages: (r.messages || []).map(normalizeMessage) });
+
+    async function fetchAccountChats() {
+      const { data, error } = await supabase
+        .from('koda_chats').select('id, title, messages, updated_at')
+        .order('updated_at', { ascending: false }).limit(200);
+      if (error) throw new Error(error.message);
+      return data.map(fromRow);
+    }
+
+    async function loadChats() {
+      const startedMeanwhile = chats.slice();   // chats begun before loading finished
+      const keep = (list) => [...startedMeanwhile, ...list.filter(c => !startedMeanwhile.some(s => s.id === c.id))];
+      try {
+        chats = keep(await fetchAccountChats());
+        inAccount = true;
+      } catch (err) {
+        console.warn('Chat history in your account is unavailable; using this browser instead:', err.message);
+        chats = keep(readLocalChats());
+        chatsLoading = false;
+        if (startedMeanwhile.length) saveChats();
+        return;
+      }
+      chats.forEach(c => { if (!startedMeanwhile.includes(c)) savedCopy.set(c.id, snapshot(c)); });
+
+      // One-time move of chats this browser saved with the older version
+      const local = readLocalChats().filter(l => !chats.some(c => c.id === l.id));
+      if (local.length) chats = [...chats, ...local].sort((x, y) => (y.updatedAt || 0) - (x.updatedAt || 0));
+      chatsLoading = false;
+      // Uploads the moved chats and any chat started while loading
+      await saveChats();
+      if (local.every(l => savedCopy.get(l.id) === snapshot(l))) {
+        try { localStorage.removeItem(LOCAL_CHATS_KEY); } catch (e) {}
+      }
+    }
+
+    // Upload every chat that changed since it was last saved; saves run one after another
+    let saveQueue = Promise.resolve();
+    function saveChats() {
+      // Never save while loading: it would overwrite chats that haven't been read yet
+      if (chatsLoading) return Promise.resolve();
+      if (!inAccount) { writeLocalChats(); return Promise.resolve(); }
+      saveQueue = saveQueue.then(async () => {
+        const changed = chats.filter(c => c.messages.length && savedCopy.get(c.id) !== snapshot(c));
+        if (!changed.length) return;
+        const snaps = changed.map(snapshot);
+        const { error } = await supabase.from('koda_chats').upsert(changed.map(c => ({
+          user_id: userId, id: c.id, title: c.title, messages: c.messages,
+          updated_at: new Date(c.updatedAt || Date.now()).toISOString()
+        })), { onConflict: 'user_id,id' });
+        if (error) { console.warn('Could not save chats to your account:', error.message); return; }
+        changed.forEach((c, i) => savedCopy.set(c.id, snaps[i]));
+      }).catch(err => console.warn('Could not save chats to your account:', err.message));
+      return saveQueue;
+    }
+
+    // Coming back to this tab: pick up chats added, changed or deleted on another device
+    async function refreshChats() {
+      if (!inAccount || busy || chatsLoading || document.querySelector('.q-edit')) return;
+      let fresh;
+      try { fresh = await fetchAccountChats(); } catch (e) { return; }
+      if (busy) return;
+      const unsaved = chats.filter(c => savedCopy.get(c.id) !== snapshot(c));
+      const merged = fresh.map(r => {
+        const mine = chats.find(c => c.id === r.id);
+        return mine && unsaved.includes(mine) && mine.updatedAt >= r.updatedAt ? mine : r;
+      });
+      unsaved.forEach(c => { if (!merged.some(m => m.id === c.id)) merged.push(c); });
+      merged.forEach(c => { if (!unsaved.includes(c)) savedCopy.set(c.id, snapshot(c)); });
+      const before = getChat(activeId);
+      chats = merged.sort((x, y) => (y.updatedAt || 0) - (x.updatedAt || 0));
+      const after = getChat(activeId);
+      if (activeId && !after) openChat(null);
+      else if (after && (!before || snapshot(before) !== snapshot(after))) { renderActiveChat(true); setEmptyState(); }
+      renderChatList();
     }
 
     const getChat = (id) => chats.find(c => c.id === id) || null;
@@ -1119,7 +1201,7 @@
     function renderChatList() {
       chatList.textContent = '';
       if (!chats.length) {
-        chatList.appendChild(el('div', 'q-list-empty', 'No chats yet'));
+        chatList.appendChild(el('div', 'q-list-empty', chatsLoading ? 'Loading chats…' : 'No chats yet'));
         return;
       }
       chats.forEach(chat => {
@@ -1167,6 +1249,10 @@
       const chat = getChat(id);
       if (!chat || !confirm('Delete chat "' + chat.title + '"?')) return;
       chats = chats.filter(c => c.id !== id);
+      savedCopy.delete(id);
+      if (inAccount) {
+        supabase.from('koda_chats').delete().eq('id', id).then(({ error }) => { if (error) console.warn('Could not delete the chat from your account:', error.message); });
+      }
       if (activeId === id) openChat(null);
       else { saveChats(); renderChatList(); }
     }
@@ -2914,6 +3000,7 @@ Copy values exactly from the line and leave out any field that isn't on it. Date
     $('backdrop').addEventListener('click', () => app.classList.remove('drawer-open'));
 
     document.getElementById('logoutBtn').addEventListener('click', async function () {
+      await saveChats();
       await supabase.auth.signOut();
       // Leave with the same ring transition as the welcome page
       const dark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -2929,6 +3016,9 @@ Copy values exactly from the line and leave out any field that isn't on it. Date
 
     // Always start on a fresh chat; earlier chats stay in the sidebar under Recents
     openChat(null);
+    await loadChats();
+    renderChatList();
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshChats(); });
   </script>
 
 </body>
