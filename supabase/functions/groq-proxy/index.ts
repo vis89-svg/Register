@@ -22,6 +22,12 @@ Deno.serve(async (req) => {
   const apiKey = Deno.env.get('GROQ_API_KEY');
   if (!apiKey) return json({ error: { message: 'GROQ_API_KEY secret is not set' } }, 500);
 
+  // "Verify JWT" also lets the public anon key through, so check for a real logged-in user
+  const userRes = await fetch(Deno.env.get('SUPABASE_URL') + '/auth/v1/user', {
+    headers: { 'Authorization': req.headers.get('Authorization') ?? '', 'apikey': Deno.env.get('SUPABASE_ANON_KEY') ?? '' }
+  });
+  if (!userRes.ok) return json({ error: { message: 'Please log in to use Koda' } }, 401);
+
   let body;
   try {
     body = await req.json();
